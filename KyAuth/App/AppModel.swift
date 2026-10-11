@@ -57,9 +57,9 @@ final class AppModel {
         guard lockState == .locked else { return }
         let generation = lockGeneration
         do {
-            try TotpVault.ensureKey()
             let context = try await UserPresence.evaluate(reason: "Unlock your KyAuth codes")
             guard generation == lockGeneration else { return context.invalidate() }
+            try TotpVault.ensureKey()
             let key = try TotpVault.key(context: context)
             if pinEnabled {
                 pinContext = context
