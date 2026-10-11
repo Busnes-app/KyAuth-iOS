@@ -60,6 +60,16 @@ struct TotpUriParserTests {
         #expect(try TotpUriParser.parse("otpauth://totp/?secret=JBSWY3DPEHPK3PXP").title == "Account")
     }
 
+    @Test func suppliedParametersMustBeSupported() throws {
+        let base = "otpauth://totp/a?secret=JBSWY3DPEHPK3PXP"
+        for bad in ["&algorithm=SHA3", "&algorithm=MD5", "&digits=abc", "&digits=9", "&digits=0", "&period=abc", "&period=-30", "&period=0"] {
+            #expect(throws: TotpError.self) { try TotpUriParser.parse(base + bad) }
+        }
+        let defaults = try TotpUriParser.parse(base)
+        #expect(defaults.algorithm == .sha1 && defaults.digits == 6 && defaults.periodSeconds == 30)
+        #expect(try TotpUriParser.parse(base + "&algorithm=sha256").algorithm == .sha256)
+    }
+
     @Test func refusesOtherSchemesHotpAndMissingSecret() {
         #expect(throws: TotpError.self) { try TotpUriParser.parse("https://example.com") }
         #expect(throws: TotpError.self) { try TotpUriParser.parse("otpauth://hotp/a?secret=JBSWY3DP&counter=1") }
@@ -78,6 +88,23 @@ struct TotpVaultTests {
         var tampered = sealed
         tampered[tampered.count - 20] ^= 1
         #expect(throws: VaultError.self) { try TotpVault.open(tampered, key: key) }
+    }
+
+    @Test func onlyAnAbsentVaultLoadsEmpty() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let key = SymmetricKey(size: .bits256)
+        #expect(try TotpVault(file: directory.appendingPathComponent("absent.bin")).load(key: key).isEmpty)
+
+        let empty = directory.appendingPathComponent("empty.bin")
+        try Data().write(to: empty)
+        #expect(throws: VaultError.self) { try TotpVault(file: empty).load(key: key) }
+
+        // A directory where the file should be cannot be read.
+        let unreadable = directory.appendingPathComponent("unreadable.bin")
+        try FileManager.default.createDirectory(at: unreadable, withIntermediateDirectories: true)
+        #expect(throws: VaultError.self) { try TotpVault(file: unreadable).load(key: key) }
+        try? FileManager.default.removeItem(at: directory)
     }
 
     @Test func fileIsExcludedFromBackupAndEmptyWhenAbsent() throws {

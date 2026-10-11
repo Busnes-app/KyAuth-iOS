@@ -194,11 +194,12 @@ final class AppModel {
             throw PairingError.invalid("KyAuth is still registering with Apple Push. Wait a moment, then try again.")
         }
         guard UserPresence.deviceHasPasscode else { throw UserPresenceError.noPasscode }
-        let spki = try DeviceSigningKey.regenerate()
+        // The old pairing goes first: once its key is replaced it can answer nothing, so any
+        // failure from here on must leave the phone unpaired.
         clearPairingState()
-        let publicKey = spki.base64EncodedString()
-        let attestation = await AppAttestor.attest(credential: pairing.credential, publicKey: publicKey)
         do {
+            let publicKey = try DeviceSigningKey.regenerate().base64EncodedString()
+            let attestation = await AppAttestor.attest(credential: pairing.credential, publicKey: publicKey)
             let paired = try await PairingClient().register(
                 pairing: pairing,
                 deviceName: deviceName,
@@ -343,7 +344,15 @@ final class AppModel {
         }
         handoff.sweepStaleRequests()
         do {
-            signOnRequest = try handoff.take(nonce: nonce, paired: account)
+            let request = try handoff.take(nonce: nonce, paired: account)
+            if signOnRequest == nil {
+                signOnRequest = request
+            } else {
+                // One sign-in at a time. The newer request is answered, not dropped, and KyAuth stays
+                // put so the one in progress keeps its prompt; the consumer reads the answer when
+                // it is next active.
+                try? handoff.write(.error("KyAuth is finishing another sign-in. Try again."), nonce: request.nonce)
+            }
         } catch SignOnRefusal.refused(let message, let consumer) {
             finishSignOn(.error(message), nonce: nonce, consumer: consumer)
         } catch {
@@ -382,15 +391,16 @@ final class AppModel {
     }
 
     private func finishSignOn(_ response: SignOnResponse, nonce: String, consumer: TrustedConsumers.Consumer) {
-        signOnRequest = nil
+        if signOnRequest?.nonce == nonce { signOnRequest = nil }
         do {
             try SignOnHandoff()?.write(response, nonce: nonce)
         } catch {
             notice = "Could not hand the sign-in back to \(consumer.name)."
             return
         }
-        if case .error(let message) = response { signOnNotice = message }
-        if let url = SignOnHandoff.returnURL(consumer, nonce: nonce) {
+        if case .error(let message) = response, signOnRequest == nil { signOnNotice = message }
+        // Never leave KyAuth while another sign-in is on screen; that consumer reads its answer later.
+        if signOnRequest == nil, let url = SignOnHandoff.returnURL(consumer, nonce: nonce) {
             UIApplication.shared.open(url)
         }
     }

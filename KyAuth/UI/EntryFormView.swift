@@ -30,10 +30,13 @@ struct EntryFormView: View {
                     TextField("Name", text: $title)
                         .textInputAutocapitalization(.words)
                     if case .add = mode {
-                        TextField("Setup key", text: $secret)
-                            .textInputAutocapitalization(.characters)
+                        // Secure entry: no keyboard learning, suggestions or screen echo of the secret.
+                        SecureField("Setup key", text: $secret)
+                            .textContentType(.oneTimeCode) // never offer to save it as a password
+                            .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .font(.body.monospaced())
+                            .privacySensitive()
                     }
                 }
                 Section {

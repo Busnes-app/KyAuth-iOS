@@ -38,6 +38,14 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   `WhenPasscodeSetThisDeviceOnly` Keychain item. No backup, export or sync, by decision. A device
   without a passcode cannot use KyAuth.
 - Keychain items are this-device-only and never synced; a fresh install erases leftovers.
+- Only an absent vault file loads as empty; an empty or unreadable file is an error and saving
+  stays disabled, so a write can never replace entries that failed to load.
+- `otpauth://` defaults apply only to omitted parameters; an unsupported algorithm or a malformed
+  `digits`/`period` is refused.
+- Secrets are typed only into secure fields (setup key, PINs), and third-party keyboards are
+  refused app-wide.
+- One sign-on at a time: a request arriving during another is answered with a busy error, and
+  KyAuth does not switch to its consumer while a sign-in is on screen.
 - Locking: immediate on background; foreground idle lock 1/5/15/30/60 minutes (default 5) on system
   uptime. Locking clears codes, the key and a copied code; the app switcher and screen capture show
   a cover. Copied codes are local-only and expire at the end of their period.

@@ -51,6 +51,14 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         return true
     }
 
+    /// Third-party keyboards can read and send anything typed, including TOTP setup keys and PINs.
+    func application(
+        _ application: UIApplication,
+        shouldAllowExtensionPointIdentifier extensionPointIdentifier: UIApplication.ExtensionPointIdentifier
+    ) -> Bool {
+        extensionPointIdentifier != .keyboard
+    }
+
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         model.didReceiveDeviceToken(deviceToken)
     }

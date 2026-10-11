@@ -123,11 +123,17 @@ enum TotpUriParser {
         let path = uri.path.hasPrefix("/") ? String(uri.path.dropFirst()) : uri.path
         let label = path.isBlank ? "Account" : path
         let issuer = params["issuer"]?.trimmedNonBlank
-        let algorithm: TotpEntry.Algorithm = switch params["algorithm"]?.uppercased() {
-        case "SHA256": .sha256
-        case "SHA512": .sha512
-        default: .sha1
+        // Defaults cover omitted parameters only: a supplied value KyAuth cannot honour would
+        // produce codes the service never accepts, so it is refused rather than replaced.
+        let algorithm: TotpEntry.Algorithm
+        switch params["algorithm"]?.uppercased() {
+        case nil, "SHA1": algorithm = .sha1
+        case "SHA256": algorithm = .sha256
+        case "SHA512": algorithm = .sha512
+        case let other?: throw TotpError.invalid("Unsupported algorithm \(other)")
         }
+        let digits = try number(params["digits"], default: 6, name: "digits")
+        let period = try number(params["period"], default: 30, name: "period")
 
         let title: String
         if let colon = label.firstIndex(of: ":") {
@@ -143,10 +149,18 @@ enum TotpUriParser {
         return try TotpEntry(
             title: title,
             secretBase32: secret,
-            digits: params["digits"].flatMap { Int($0) } ?? 6,
-            periodSeconds: params["period"].flatMap { Int64($0) } ?? 30,
+            digits: Int(digits),
+            periodSeconds: period,
             algorithm: algorithm,
             issuer: issuer
         )
+    }
+
+    private static func number(_ raw: String?, default value: Int64, name: String) throws -> Int64 {
+        guard let raw else { return value }
+        guard let parsed = Int64(raw.trimmingCharacters(in: .whitespaces)), parsed > 0 else {
+            throw TotpError.invalid("Invalid \(name) \(raw)")
+        }
+        return parsed
     }
 }
