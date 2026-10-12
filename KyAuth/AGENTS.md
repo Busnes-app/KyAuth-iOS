@@ -23,7 +23,7 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 
 - Wire contracts with KyIdentity are byte-exact and covered by golden-vector tests:
   `kyidentity-push-v2` (MFA answers), `kyidentity-push-token-v2` with transport `fcm` (the relay
-  transport, which also carries APNs; needs KyIdentity PR #87), RFC 7523 device assertions (raw
+  transport, which also carries APNs; KyIdentity master since PR #87), RFC 7523 device assertions (raw
   `r||s`). Registration always sends `platform: "ios"`; an omitted platform is stored as Android.
 - App Attest grading: `docs/specs/2026-10-11-ios-app-attest.md`. Sign-on handoff:
   `docs/specs/2026-10-11-ios-signon-handoff.md`. Change either only together with its counterpart
