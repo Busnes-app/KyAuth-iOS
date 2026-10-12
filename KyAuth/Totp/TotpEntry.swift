@@ -115,8 +115,10 @@ enum TotpUriParser {
             throw TotpError.invalid("Only TOTP is supported (got \(uri.host ?? "nothing"))")
         }
         var params: [String: String] = [:]
+        // A valueless parameter (`&digits`) is present but empty, so it is refused below rather
+        // than mistaken for an omitted one.
         for item in uri.queryItems ?? [] where params[item.name] == nil {
-            params[item.name] = item.value
+            params[item.name] = item.value ?? ""
         }
         guard let secret = params["secret"]?.trimmedNonBlank else { throw TotpError.invalid("Missing OTP secret parameter") }
 

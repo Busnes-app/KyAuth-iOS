@@ -20,6 +20,7 @@ struct KyAuthApp: App {
                 delegate.model.lock()
             case .active:
                 delegate.model.checkIdle()
+                delegate.model.retryUnsentResponses()
                 Task { await delegate.model.refreshPendingChallenge() }
             default:
                 break

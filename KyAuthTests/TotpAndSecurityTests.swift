@@ -62,7 +62,7 @@ struct TotpUriParserTests {
 
     @Test func suppliedParametersMustBeSupported() throws {
         let base = "otpauth://totp/a?secret=JBSWY3DPEHPK3PXP"
-        for bad in ["&algorithm=SHA3", "&algorithm=MD5", "&digits=abc", "&digits=9", "&digits=0", "&period=abc", "&period=-30", "&period=0"] {
+        for bad in ["&algorithm=SHA3", "&algorithm=MD5", "&digits=abc", "&digits=9", "&digits=0", "&period=abc", "&period=-30", "&period=0", "&digits", "&period", "&algorithm", "&digits=", "&algorithm="] {
             #expect(throws: TotpError.self) { try TotpUriParser.parse(base + bad) }
         }
         let defaults = try TotpUriParser.parse(base)

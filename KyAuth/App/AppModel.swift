@@ -21,7 +21,7 @@ final class AppModel {
     private(set) var lockState: LockState = .locked
     private(set) var entries: [TotpEntry] = []
     private(set) var vaultError: String?
-    private(set) var account: PairedAccount? = PairingStore.account()
+    private(set) var account: PairedAccount?
     private(set) var pendingChallenge: MfaChallenge? = MfaChallengeStore.load()
     private(set) var pushState = PushStore.load()
     private(set) var pinEnabled = PinStore.isEnabled
@@ -46,7 +46,12 @@ final class AppModel {
     var isPaired: Bool { account != nil }
     var needsPushRefresh: Bool { pushState.needsRefresh(paired: isPaired) }
 
-    init() {
+    /// The App Group exchange; tests point it at a temporary directory.
+    private let makeHandoff: () -> SignOnHandoff?
+
+    init(account: PairedAccount? = PairingStore.account(), makeHandoff: @escaping () -> SignOnHandoff? = { SignOnHandoff() }) {
+        self.account = account
+        self.makeHandoff = makeHandoff
         idleMinutes = IdleLock.validatedMinutes(UserDefaults.standard.integer(forKey: "idle-minutes"))
     }
 
@@ -338,11 +343,12 @@ final class AppModel {
         guard url.scheme?.lowercased() == "kyauth", url.host?.lowercased() == "signon" else { return }
         let nonce = URLComponents(url: url, resolvingAgainstBaseURL: false)?
             .queryItems?.first(where: { $0.name == "nonce" })?.value ?? ""
-        guard let handoff = SignOnHandoff() else {
+        guard let handoff = makeHandoff() else {
             signOnNotice = "Sign-in request expired"
             return
         }
         handoff.sweepStaleRequests()
+        retryUnsentResponses()
         do {
             let request = try handoff.take(nonce: nonce, paired: account)
             if signOnRequest == nil {
@@ -351,7 +357,7 @@ final class AppModel {
                 // One sign-in at a time. The newer request is answered, not dropped, and KyAuth stays
                 // put so the one in progress keeps its prompt; the consumer reads the answer when
                 // it is next active.
-                try? handoff.write(.error("KyAuth is finishing another sign-in. Try again."), nonce: request.nonce)
+                deliver(.error("KyAuth is finishing another sign-in. Try again."), nonce: request.nonce, consumer: request.consumer)
             }
         } catch SignOnRefusal.refused(let message, let consumer) {
             finishSignOn(.error(message), nonce: nonce, consumer: consumer)
@@ -392,16 +398,46 @@ final class AppModel {
 
     private func finishSignOn(_ response: SignOnResponse, nonce: String, consumer: TrustedConsumers.Consumer) {
         if signOnRequest?.nonce == nonce { signOnRequest = nil }
-        do {
-            try SignOnHandoff()?.write(response, nonce: nonce)
-        } catch {
-            notice = "Could not hand the sign-in back to \(consumer.name)."
-            return
-        }
+        guard deliver(response, nonce: nonce, consumer: consumer) else { return }
         if case .error(let message) = response, signOnRequest == nil { signOnNotice = message }
         // Never leave KyAuth while another sign-in is on screen; that consumer reads its answer later.
         if signOnRequest == nil, let url = SignOnHandoff.returnURL(consumer, nonce: nonce) {
             UIApplication.shared.open(url)
+        }
+    }
+
+    /// Answers that could not be written yet. The request file is already consumed, so the answer is
+    /// the consumer's only way out; it is retried until the consumer stops waiting (180 s).
+    private var unsentResponses: [String: (response: SignOnResponse, consumer: TrustedConsumers.Consumer, since: Date)] = [:]
+    private static let consumerWait: TimeInterval = 180
+
+    var unsentResponseNonces: Set<String> { Set(unsentResponses.keys) }
+
+    /// Writes the answer, or keeps it for `retryUnsentResponses` and says so.
+    @discardableResult
+    private func deliver(_ response: SignOnResponse, nonce: String, consumer: TrustedConsumers.Consumer) -> Bool {
+        do {
+            guard let handoff = makeHandoff() else { throw CocoaError(.fileNoSuchFile) }
+            try handoff.write(response, nonce: nonce)
+            unsentResponses[nonce] = nil
+            return true
+        } catch {
+            if unsentResponses[nonce] == nil {
+                unsentResponses[nonce] = (response, consumer, Date())
+            }
+            notice = "Could not hand the sign-in back to \(consumer.name). KyAuth will try again."
+            return false
+        }
+    }
+
+    func retryUnsentResponses(now: Date = Date()) {
+        for (nonce, pending) in unsentResponses {
+            if now.timeIntervalSince(pending.since) > Self.consumerWait {
+                unsentResponses[nonce] = nil
+            } else if deliver(pending.response, nonce: nonce, consumer: pending.consumer), signOnRequest == nil,
+                      let url = SignOnHandoff.returnURL(pending.consumer, nonce: nonce) {
+                UIApplication.shared.open(url)
+            }
         }
     }
 
