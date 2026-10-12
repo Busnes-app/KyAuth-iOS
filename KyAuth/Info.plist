@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- kyauth://signon?nonce=… is the sign-on handoff from suite apps (docs/specs/2026-10-11-ios-signon-handoff.md).
+	     The URL carries only a nonce; the request itself is in the shared App Group. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>org.kysecurity.authenticator.signon</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>kyauth</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

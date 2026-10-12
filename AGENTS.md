@@ -225,9 +225,13 @@ and retain their own identity, sealer label and collection adapters.
 
 - Web themes default to the Busnes.app cream/light and charcoal/dark palettes with orange accents, following the OS until a browser-local choice is saved. Preserve existing named themes and saved choices.
 
+- KyAuth iOS (decided 2026-10-11): native iOS look (system tabs, light/dark, Busnes orange accent; no suite theme picker), iPhone/iPad only, APNs as in KyPost-for-Mac's iOS target, no UnifiedPush, no passkey provider, AES-GCM vault instead of KDBX, the Android PIN wipe ladder kept. KyIdentity grades iOS pairings with App Attest (level `appattest`), and suite apps sign in through KyAuth by an App Group handoff instead of `AccountManager`; KyPost-for-Mac's iOS target is the first consumer. Contracts: `docs/specs/`.
+
 When the user requests a durable behavior change, record it here or in the relevant child AGENTS.md
 
 ## Child DOX Index
+
+- `KyAuth/` — the KyAuth iOS app: product contracts, file ownership and verification.
 
 - `KyDrive-server/` — general drive backend, NAS/container packaging, Euro-Office integration and local acceptance evidence.
 
