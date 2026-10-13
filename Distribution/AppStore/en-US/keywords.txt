@@ -1,0 +1,1 @@
+2FA,TOTP,MFA,OTP,two-factor,one-time,code,verification,security,login,sign-in,self-hosted,SSO,token

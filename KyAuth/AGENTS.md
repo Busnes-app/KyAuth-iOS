@@ -99,7 +99,10 @@ App Store screenshots: `scripts/capture-screenshots.sh [iphone|ipad|duo|all]` dr
 through `KyAuthUITests/ScreenshotTests` (skipped unless `KYAUTH_SCREENSHOTS=1`) into
 `Distribution/Screenshots/` (iPhone 6.3", iPad 13", iPhone Duo outer and inner; light and dark).
 The Duo needs the iOS 27.1 simulator runtime and boots folded; its inner display is captured only
-after unfolding it by hand in DeviceHub.
+after unfolding it by hand in DeviceHub. `swift scripts/render-header.swift` then draws the App Store
+product page header (3840 x 1646) and search artwork (3840 x 2560) into `Distribution/Promo/` from
+those screenshots. Listing text, one file per App Store Connect field, is in
+`Distribution/AppStore/en-US/`; keep its claims true to the app.
 
 ## Child DOX Index
 
