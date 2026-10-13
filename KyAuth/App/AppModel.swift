@@ -33,9 +33,16 @@ final class AppModel {
     /// Bumped on every lock: views close sheets and forms that belong to the unlocked session.
     private(set) var lockGeneration = 0
     var screenCaptured = false
+    /// The App Store review demo: codes and requests in memory only. Never stored; locking ends it.
+    private(set) var isDemo = false
+    private var nextDemoPush: TimeInterval = 0
 
     var idleMinutes: Int {
         didSet { UserDefaults.standard.set(idleMinutes, forKey: "idle-minutes") }
+    }
+
+    var appearance: Appearance {
+        didSet { UserDefaults.standard.set(appearance.rawValue, forKey: Appearance.defaultsKey) }
     }
 
     private var vaultKey: SymmetricKey?
@@ -44,6 +51,9 @@ final class AppModel {
     private var copiedChangeCount: Int?
 
     var isPaired: Bool { account != nil }
+    /// A fresh, unpaired install has nothing to unlock, so the lock screen waits for a tap; this also
+    /// leaves Try Demo reachable without a passcode prompt in the way.
+    var promptsUnlockOnLaunch: Bool { isPaired || TotpVault.standard.exists }
     var needsPushRefresh: Bool { pushState.needsRefresh(paired: isPaired) }
 
     /// The App Group exchange; tests point it at a temporary directory.
@@ -53,6 +63,7 @@ final class AppModel {
         self.account = account
         self.makeHandoff = makeHandoff
         idleMinutes = IdleLock.validatedMinutes(UserDefaults.standard.integer(forKey: "idle-minutes"))
+        appearance = Appearance(stored: UserDefaults.standard.string(forKey: Appearance.defaultsKey))
     }
 
     // MARK: - Lock
@@ -122,8 +133,12 @@ final class AppModel {
         recordActivity()
     }
 
-    /// Clears codes, the vault key and anything copied, and closes every open form.
+    /// Clears codes, the vault key and anything copied, ends the demo, and closes every open form.
     func lock() {
+        if isDemo {
+            isDemo = false
+            pendingChallenge = MfaChallengeStore.load()
+        }
         lockGeneration += 1
         pinContext?.invalidate()
         pinContext = nil
@@ -164,6 +179,10 @@ final class AppModel {
     }
 
     private func saveEntries(_ updated: [TotpEntry]) throws {
+        if isDemo {
+            entries = updated
+            return
+        }
         guard let vaultKey, lockState == .unlocked, vaultError == nil else {
             throw VaultError.corrupt
         }
@@ -194,6 +213,7 @@ final class AppModel {
     /// Pairs with KyIdentity. The device key is replaced first, so a failed re-pair leaves the phone
     /// unpaired: its old key is already gone.
     func pair(_ pairing: QrPairing, deviceName: String) async throws {
+        if isDemo { lock() }
         guard let pushToken = pushState.latestToken else {
             UIApplication.shared.registerForRemoteNotifications()
             throw PairingError.invalid("KyAuth is still registering with Apple Push. Wait a moment, then try again.")
@@ -282,6 +302,7 @@ final class AppModel {
 
     /// Picks up a request whose notification the user did not tap.
     func refreshPendingChallenge() async {
+        guard !isDemo else { return }
         for notification in await UNUserNotificationCenter.current().deliveredNotifications()
             .sorted(by: { $0.date > $1.date }) {
             handlePush(notification.request.content.userInfo)
@@ -292,6 +313,7 @@ final class AppModel {
 
     /// Approve needs the two digits the browser shows; a wrong number is a denial at the server.
     func answer(_ challenge: MfaChallenge, approve: Bool, digits: String) async {
+        if isDemo { return answerDemo(challenge, approve: approve, digits: digits) }
         guard let account, MfaChallengeStore.load()?.challengeId == challenge.challengeId else {
             pendingChallenge = MfaChallengeStore.load()
             return
@@ -334,7 +356,39 @@ final class AppModel {
     }
 
     func dismissExpiredChallenge() {
+        if isDemo { return answerDemo(pendingChallenge, approve: false, digits: "") }
         pendingChallenge = MfaChallengeStore.load()
+    }
+
+    // MARK: - Demo
+
+    /// Opens the codes screen without Face ID, the vault or a pairing. A paired phone never runs it.
+    func startDemo() {
+        guard !isPaired, signOnRequest == nil else { return }
+        lock()
+        isDemo = true
+        entries = DemoMode.entries()
+        pendingChallenge = nil
+        nextDemoPush = ProcessInfo.processInfo.systemUptime + DemoMode.firstPushDelay
+        lockState = .unlocked
+        idleLock.reset()
+        recordActivity()
+    }
+
+    /// Raises a simulated sign-in request every `DemoMode.pushInterval` while none is showing.
+    func tickDemo() {
+        guard isDemo, pendingChallenge == nil, ProcessInfo.processInfo.systemUptime >= nextDemoPush else { return }
+        var generator = SystemRandomNumberGenerator()
+        pendingChallenge = DemoMode.challenge(nowMs: Int64(Date().timeIntervalSince1970 * 1000), using: &generator)
+        notice = "Demo sign-in request received"
+    }
+
+    private func answerDemo(_ challenge: MfaChallenge?, approve: Bool, digits: String) {
+        if let challenge, challenge.id == pendingChallenge?.id {
+            notice = DemoMode.result(challenge, approve: approve, digits: digits)
+        }
+        pendingChallenge = nil
+        nextDemoPush = ProcessInfo.processInfo.systemUptime + DemoMode.pushInterval
     }
 
     // MARK: - Sign-on handoff
@@ -461,6 +515,7 @@ final class AppModel {
         pushState = PushState()
         pinEnabled = false
         idleMinutes = IdleLock.defaultMinutes
+        appearance = .system
         UIApplication.shared.registerForRemoteNotifications()
     }
 

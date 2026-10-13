@@ -17,7 +17,7 @@ struct PairingView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            BusnesForm {
                 Section {
                     Button("Scan Pairing QR Code", systemImage: "qrcode.viewfinder") { scanning = true }
                     Button("Paste Pairing Link", systemImage: "doc.on.clipboard") { pasteLink() }
@@ -145,13 +145,15 @@ struct SignOnSheet: View {
                     } label: {
                         Text("Sign In").frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .busnesProminentButton()
                     Button("Cancel", role: .cancel) { model.cancelSignOn() }
                 }
                 .controlSize(.large)
                 .disabled(working)
             }
             .padding(24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.busnesBackground)
             .navigationTitle("Sign in with KyIdentity")
             .navigationBarTitleDisplayMode(.inline)
         }

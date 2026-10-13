@@ -41,6 +41,9 @@ struct TotpVault {
         Keychain.delete(keyAccount)
     }
 
+    /// False until the first save: nothing to unlock yet.
+    var exists: Bool { FileManager.default.fileExists(atPath: file.path) }
+
     /// Empty only when no vault exists yet. An unreadable or empty file is an error, which keeps
     /// saving disabled so a write cannot replace entries that failed to load.
     func load(key: SymmetricKey) throws -> [TotpEntry] {

@@ -19,7 +19,7 @@ struct VaultView: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            BusnesList {
                 if model.needsPushRefresh {
                     Section {
                         ReconnectBanner()
@@ -60,7 +60,7 @@ struct VaultView: View {
                         Text("Add an account by scanning its setup QR code or entering its key.")
                     } actions: {
                         Button("Scan QR Code") { sheet = .scan }
-                            .buttonStyle(.borderedProminent)
+                            .busnesProminentButton()
                     }
                 }
             }
@@ -133,7 +133,7 @@ struct ReconnectBanner: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             Button("Reconnect") { Task { await model.reconnectPush() } }
-                .buttonStyle(.borderedProminent)
+                .busnesProminentButton()
         }
         .padding(.vertical, 4)
     }

@@ -25,7 +25,7 @@ struct EntryFormView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            BusnesForm {
                 Section("Account") {
                     TextField("Name", text: $title)
                         .textInputAutocapitalization(.words)
