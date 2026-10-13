@@ -59,6 +59,8 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   codes and a simulated request every 15 s with `.invalid` server, held in memory. It needs no Face
   ID, reads and writes no vault, Keychain, pairing or network; Settings hides PIN, auto-lock, pairing
   and erase. Any lock (background, idle, Lock, Exit Demo) ends it.
+- The lock screen prompts for Face ID on its own only when paired or a vault file exists; a fresh
+  install waits for a tap, so Try Demo is reachable without a passcode prompt.
 - No Android features without an iOS counterpart: no UnifiedPush, no credential provider/passkeys
   (dropped by decision), no `AccountManager` (replaced by the handoff).
 
@@ -67,7 +69,9 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 - Native iOS look: system `TabView` (Codes, Settings), forms and lists, Busnes palettes: background
   `BusnesBackground` (`#f8f6f0` / `#182326`), rows and cards `BusnesSurface` (`#ffffff` /
   `#1f2b2e`), orange accent (`#bf3f18` / `#f5865f`); text keeps system label colors. Use
-  `BusnesForm`/`BusnesList` instead of `Form`/`List`.
+  `BusnesForm`/`BusnesList` instead of `Form`/`List`, `Color.busnesBackground` behind other
+  screens, and `busnesProminentButton()` for filled buttons (`BusnesOnAccent` label: white /
+  `#182326`, since white fails contrast on the dark accent).
 - Appearance setting: System (default, follows iOS), Busnes Light, Busnes Dark, set on the window
   (`UI/Appearance.swift`). No other themes: Android's other 15 themes are not ported, by decision.
 - No third-party dependencies. Keep security checks fail-closed and add a focused test for

@@ -102,7 +102,7 @@ struct MfaRequestCard: View {
             } label: {
                 Text("Approve").frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .busnesProminentButton()
             .disabled(approveDisabled)
         }
         .controlSize(.large)

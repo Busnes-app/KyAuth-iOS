@@ -141,6 +141,7 @@ struct LicenseView: View {
                 .font(.footnote.monospaced())
                 .padding()
         }
+        .background(Color.busnesBackground)
         .navigationTitle("License")
     }
 

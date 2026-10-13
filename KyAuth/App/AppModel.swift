@@ -51,6 +51,9 @@ final class AppModel {
     private var copiedChangeCount: Int?
 
     var isPaired: Bool { account != nil }
+    /// A fresh, unpaired install has nothing to unlock, so the lock screen waits for a tap; this also
+    /// leaves Try Demo reachable without a passcode prompt in the way.
+    var promptsUnlockOnLaunch: Bool { isPaired || TotpVault.standard.exists }
     var needsPushRefresh: Bool { pushState.needsRefresh(paired: isPaired) }
 
     /// The App Group exchange; tests point it at a temporary directory.

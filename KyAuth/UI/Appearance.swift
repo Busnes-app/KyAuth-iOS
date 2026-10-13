@@ -63,3 +63,11 @@ struct BusnesList<Content: View>: View {
             .background(Color.busnesBackground)
     }
 }
+
+extension View {
+    /// `.borderedProminent` with Busnes label colors: white on the light accent, charcoal on the
+    /// dark one, where white would fail contrast.
+    func busnesProminentButton() -> some View {
+        buttonStyle(.borderedProminent).foregroundStyle(Color.busnesOnAccent)
+    }
+}

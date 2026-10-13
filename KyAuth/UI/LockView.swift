@@ -25,7 +25,7 @@ struct LockView: View {
                         Label("Unlock with \(UserPresence.biometryName)", systemImage: "faceid")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .busnesProminentButton()
                     .controlSize(.large)
                     if !model.isPaired && model.pendingChallenge == nil {
                         Button("Try Demo") { model.startDemo() }
@@ -39,7 +39,7 @@ struct LockView: View {
         .task {
             // A launch from a notification or a sign-on link delivers it just after the first frame.
             try? await Task.sleep(for: .milliseconds(400))
-            guard !prompted, model.pendingChallenge == nil, model.signOnRequest == nil else { return }
+            guard !prompted, model.promptsUnlockOnLaunch, model.pendingChallenge == nil, model.signOnRequest == nil else { return }
             prompted = true
             await model.unlock()
         }
