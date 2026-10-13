@@ -18,6 +18,7 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 - `Totp/`: entries, generator, `otpauth://` parsing, `TotpVault`.
 - `Security/`: Keychain, `UserPresence`, PIN policy and store, `IdleLock`, `LocalWipe`.
 - `UI/`: SwiftUI screens.
+- `PrivacyInfo.xcprivacy`: the App Store privacy manifest.
 
 ## Local Contracts
 
@@ -29,6 +30,9 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   `docs/specs/2026-10-11-ios-signon-handoff.md`. Change either only together with its counterpart
   (KyIdentity-server, KyPost-for-Mac).
 - Release builds require HTTPS; debug builds also accept loopback HTTP.
+- `PrivacyInfo.xcprivacy` declares every required-reason API the app uses (now `UserDefaults`
+  CA92.1, `systemUptime` 35F9.1, file timestamps C617.1), no tracking and no collected data.
+  Adding a use from another category, or for another reason, updates it in the same change.
 - Device key: Secure Enclave P-256, `.privateKeyUsage` + `.userPresence`, replaced at every pairing
   (a failed re-pair leaves the phone unpaired). A software key exists only in the simulator.
 - Every signature and every vault unlock takes exactly one Face ID / passcode check; the evaluated
