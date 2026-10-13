@@ -44,6 +44,8 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 - Keychain items are this-device-only and never synced; a fresh install erases leftovers.
 - Only an absent vault file loads as empty; an empty or unreadable file is an error and saving
   stays disabled, so a write can never replace entries that failed to load.
+- The Codes tab scanner (`ScannedCode`) adds `otpauth://` accounts and hands a KyIdentity pairing
+  code to `PairingView(scanned:)`, which pairs only after a tap (pairing replaces the device key).
 - `otpauth://` defaults apply only to omitted parameters; an unsupported algorithm or a malformed
   or valueless `digits`/`period`/`algorithm` is refused.
 - Secrets are typed only into secure fields (setup key, PINs), and third-party keyboards are
@@ -97,7 +99,10 @@ App Store screenshots: `scripts/capture-screenshots.sh [iphone|ipad|duo|all]` dr
 through `KyAuthUITests/ScreenshotTests` (skipped unless `KYAUTH_SCREENSHOTS=1`) into
 `Distribution/Screenshots/` (iPhone 6.3", iPad 13", iPhone Duo outer and inner; light and dark).
 The Duo needs the iOS 27.1 simulator runtime and boots folded; its inner display is captured only
-after unfolding it by hand in DeviceHub.
+after unfolding it by hand in DeviceHub. `swift scripts/render-header.swift` then draws the App Store
+product page header (3840 x 1646) and search artwork (3840 x 2560) into `Distribution/Promo/` from
+those screenshots. Listing text, one file per App Store Connect field, is in
+`Distribution/AppStore/en-US/`; keep its claims true to the app.
 
 ## Child DOX Index
 

@@ -1,0 +1,30 @@
+KyAuth is the authenticator for KyIdentity. It keeps your sign-in codes on your iPhone or iPad, approves KyIdentity sign-in requests, and signs you in to suite apps such as KyPost. Your codes never leave the device.
+
+SIGN-IN CODES
+• Add any account that offers an authenticator app: scan its setup QR code or type its setup key.
+• Time-based codes (TOTP) of 6 to 8 digits, with a countdown on each one.
+• Search, edit and delete your accounts. A copied code stays on this device and is cleared when it expires.
+
+SIGN-IN REQUESTS
+• Pair KyAuth with your organization's KyIdentity server by scanning its pairing code.
+• When you sign in, KyIdentity sends a request to your device. Type the two-digit number your browser shows, then approve with Face ID, Touch ID or your passcode.
+• KyAuth never knows the right number. Only you can read it from the sign-in screen, so a request you did not start cannot be approved by a stray tap.
+• Requests name the account and expire within minutes.
+
+SIGN IN TO SUITE APPS
+• Suite apps such as KyPost sign you in through KyAuth: switch to KyAuth, confirm, and you are returned to the app, already signed in.
+
+PRIVATE AND SECURE BY DESIGN
+• Your codes are encrypted on this device and are never backed up, synced or sent anywhere.
+• Your device key lives in the Secure Enclave. Every approval and every unlock asks for Face ID, Touch ID or your passcode.
+• KyAuth locks the moment you leave it, and after an auto-lock time you choose.
+• Add an optional PIN after Face ID or Touch ID. Five wrong PINs erase KyAuth's data on the device.
+• The app switcher and screen recordings show a cover instead of your codes.
+• No accounts with us, no ads, no analytics, no tracking.
+
+PLEASE NOTE
+• Sign-in requests and suite sign-in need a KyIdentity server, which your organization runs. Sign-in codes work with any service.
+• Because codes are never backed up, keep your recovery codes for each account somewhere safe. If you lose your device, you will need them.
+• Your device must have a passcode set.
+
+Want to look around first? Tap Try Demo on the lock screen to see example codes and practice approving a sign-in request. Nothing is saved.

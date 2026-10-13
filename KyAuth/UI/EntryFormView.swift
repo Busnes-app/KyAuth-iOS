@@ -137,18 +137,26 @@ struct EntryFormView: View {
 
 /// Scans an `otpauth://totp` QR code, then shows the prefilled form for review.
 struct AddByScanView: View {
+    @Environment(AppModel.self) private var model
     @State private var scanned: TotpEntry?
+    @State private var pairing: QrPairing?
     @State private var error: String?
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         if let scanned {
             EntryFormView(mode: .scanned(scanned))
+        } else if let pairing {
+            PairingView(scanned: pairing)
         } else {
             NavigationStack {
                 QRScannerView { value in
                     do {
-                        scanned = try TotpUriParser.parse(value)
+                        switch try ScannedCode.parse(value) {
+                        case .account(let entry): scanned = entry
+                        case .pairing where model.isDemo: error = "Exit the demo to pair with KyIdentity."
+                        case .pairing(let code): pairing = code
+                        }
                     } catch {
                         self.error = error.localizedDescription
                     }

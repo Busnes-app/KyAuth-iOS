@@ -54,6 +54,32 @@ struct QrPairingParserTests {
     }
 }
 
+/// The Codes tab scanner: setup codes add an account, pairing codes go to pairing.
+struct ScannedCodeTests {
+    @Test func setupCodeAddsAnAccount() throws {
+        guard case .account(let entry) = try ScannedCode.parse("otpauth://totp/Mail:me?secret=JBSWY3DPEHPK3PXP&issuer=Mail")
+        else { Issue.record("expected an account"); return }
+        #expect(entry.issuer == "Mail")
+    }
+
+    @Test func pairingCodesGoToPairing() throws {
+        for raw in [
+            #"{"type":"kyidentity_device_pairing","serverUrl":"https://id.example.com","pairingToken":"t"}"#,
+            "kyidentity://native-pair?srv=https%3A%2F%2Fid.example.com&pt=t",
+        ] {
+            guard case .pairing(let pairing) = try ScannedCode.parse(raw) else { Issue.record("expected pairing: \(raw)"); continue }
+            #expect(pairing.serverUrl == "https://id.example.com")
+        }
+    }
+
+    @Test func badPairingCodeSaysWhyAndOtherCodesAreRefused() {
+        let expired = #"{"type":"kyidentity_device_pairing","serverUrl":"https://id.example.com","pairingToken":"t","expiresAt":1}"#
+        #expect(throws: PairingError.self) { try ScannedCode.parse(expired) }
+        #expect(throws: TotpError.self) { try ScannedCode.parse("https://example.com") }
+        #expect(throws: TotpError.self) { try ScannedCode.parse("otpauth://hotp/x?secret=JBSWY3DPEHPK3PXP") }
+    }
+}
+
 @MainActor
 struct PairingEndpointTests {
     @Test func buildsEndpointsUnderTheServerPath() throws {
