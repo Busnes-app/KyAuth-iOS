@@ -87,11 +87,17 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project KyAuth.xcodeproj \
-  -scheme KyAuth -destination 'platform=iOS Simulator,name=iPhone 17 Pro' CODE_SIGNING_ALLOWED=NO test
+  -scheme KyAuth -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' CODE_SIGNING_ALLOWED=NO test
 ```
 
 Not verifiable in the simulator, and not yet observed on hardware: APNs delivery, Secure Enclave
 signing, App Attest, Face ID prompts, the camera scanner, the sign-on round trip with KyPost.
+
+App Store screenshots: `scripts/capture-screenshots.sh [iphone|ipad|duo|all]` drives the demo
+through `KyAuthUITests/ScreenshotTests` (skipped unless `KYAUTH_SCREENSHOTS=1`) into
+`Distribution/Screenshots/` (iPhone 6.3", iPad 13", iPhone Duo outer and inner; light and dark).
+The Duo needs the iOS 27.1 simulator runtime and boots folded; its inner display is captured only
+after unfolding it by hand in DeviceHub.
 
 ## Child DOX Index
 
