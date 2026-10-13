@@ -2,8 +2,10 @@ import SwiftUI
 import UIKit
 
 /// Pairs this phone with KyIdentity from its 90-second QR code, a pasted pairing link, or the server
-/// address, user ID and PIN shown beside the QR code.
+/// address, user ID and PIN shown beside the QR code. A code scanned in the Codes tab arrives as
+/// `scanned` and waits for a tap, since pairing replaces the device key.
 struct PairingView: View {
+    var scanned: QrPairing?
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
 
@@ -18,24 +20,14 @@ struct PairingView: View {
     var body: some View {
         NavigationStack {
             BusnesForm {
-                Section {
-                    Button("Scan Pairing QR Code", systemImage: "qrcode.viewfinder") { scanning = true }
-                    Button("Paste Pairing Link", systemImage: "doc.on.clipboard") { pasteLink() }
-                } footer: {
-                    Text("Open the KyIdentity devices page and add a device. The code is valid for 90 seconds.")
-                }
-                Section("Or Enter the Details") {
-                    TextField("Server (https://…)", text: $serverUrl)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    TextField("User ID", text: $userId)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    TextField("Pairing PIN", text: $pinCode)
-                        .keyboardType(.numberPad)
-                    Button("Pair") { pairManually() }
-                        .disabled(serverUrl.isBlank || userId.isBlank || pinCode.isBlank)
+                if let scanned {
+                    Section {
+                        Button("Pair with \(URL(string: scanned.serverUrl)?.host() ?? scanned.serverUrl)") { run(scanned) }
+                    } footer: {
+                        Text("A KyIdentity pairing code was scanned. It is valid for 90 seconds.")
+                    }
+                } else {
+                    entryOptions
                 }
                 Section {
                     TextField("Device name", text: $deviceName)
@@ -73,6 +65,29 @@ struct PairingView: View {
             }
         }
         .interactiveDismissDisabled(working)
+    }
+
+    @ViewBuilder
+    private var entryOptions: some View {
+        Section {
+            Button("Scan Pairing QR Code", systemImage: "qrcode.viewfinder") { scanning = true }
+            Button("Paste Pairing Link", systemImage: "doc.on.clipboard") { pasteLink() }
+        } footer: {
+            Text("Open the KyIdentity devices page and add a device. The code is valid for 90 seconds.")
+        }
+        Section("Or Enter the Details") {
+            TextField("Server (https://…)", text: $serverUrl)
+                .keyboardType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            TextField("User ID", text: $userId)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            TextField("Pairing PIN", text: $pinCode)
+                .keyboardType(.numberPad)
+            Button("Pair") { pairManually() }
+                .disabled(serverUrl.isBlank || userId.isBlank || pinCode.isBlank)
+        }
     }
 
     private func pasteLink() {

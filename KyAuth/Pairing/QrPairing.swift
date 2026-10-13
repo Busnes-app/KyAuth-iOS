@@ -44,7 +44,7 @@ struct QrPairing: Equatable {
 /// `kysignon` and `kypost` names). Either form must name an HTTPS origin before anything is sent.
 enum QrPairingParser {
     private static let jsonTypes: Set<String> = ["kyidentity_device_pairing", "kysignon_device_pairing", "kypost_device_pairing"]
-    private static let linkSchemes: Set<String> = ["kyidentity", "kysignon", "kypost"]
+    static let linkSchemes: Set<String> = ["kyidentity", "kysignon", "kypost"]
 
     static func parse(_ raw: String, now: Date = Date()) throws -> QrPairing {
         let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -97,6 +97,29 @@ enum QrPairingParser {
             username: param("user", "username"),
             expiresAtEpochSeconds: param("exp").flatMap { Int64($0) }
         )
+    }
+}
+
+/// What the Codes tab's scanner read: an authenticator setup code, or a KyIdentity pairing code
+/// scanned there instead of in Settings, which goes to pairing rather than being refused.
+enum ScannedCode {
+    case account(TotpEntry)
+    case pairing(QrPairing)
+
+    static func parse(_ raw: String, now: Date = Date()) throws -> ScannedCode {
+        let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if value.lowercased().hasPrefix("otpauth:") { return .account(try TotpUriParser.parse(value)) }
+        do {
+            return .pairing(try QrPairingParser.parse(value, now: now))
+        } catch where looksLikePairing(value) {
+            throw error // an expired or unsafe pairing code says so
+        } catch {
+            throw TotpError.invalid("This is not an authenticator or KyIdentity pairing QR code")
+        }
+    }
+
+    private static func looksLikePairing(_ value: String) -> Bool {
+        value.hasPrefix("{") || QrPairingParser.linkSchemes.contains(URLComponents(string: value)?.scheme?.lowercased() ?? "")
     }
 }
 

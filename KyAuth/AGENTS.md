@@ -44,6 +44,8 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 - Keychain items are this-device-only and never synced; a fresh install erases leftovers.
 - Only an absent vault file loads as empty; an empty or unreadable file is an error and saving
   stays disabled, so a write can never replace entries that failed to load.
+- The Codes tab scanner (`ScannedCode`) adds `otpauth://` accounts and hands a KyIdentity pairing
+  code to `PairingView(scanned:)`, which pairs only after a tap (pairing replaces the device key).
 - `otpauth://` defaults apply only to omitted parameters; an unsupported algorithm or a malformed
   or valueless `digits`/`period`/`algorithm` is refused.
 - Secrets are typed only into secure fields (setup key, PINs), and third-party keyboards are
