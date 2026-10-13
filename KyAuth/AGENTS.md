@@ -9,7 +9,7 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 ## Ownership
 
 - `App/`: `KyAuthApp` (scene phase, URL handling), `AppDelegate` (APNs, notifications), `AppModel`
-  (all state and workflows; views only call it).
+  (all state and workflows; views only call it), `DemoMode` (App Store review demo data).
 - `Pairing/`: QR/link parsing, endpoint validation, `PairingClient`, `PairingStore`,
   `DeviceSigningKey` (Secure Enclave), `AppAttestor` + `AttestationReason`, `PushStore`,
   `PushRefreshClient`.
@@ -55,6 +55,10 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 - Push MFA: a push must name this device and account, carry `purpose` and an expiry at most 10
   minutes ahead; a payload `serverUrl` is ignored. Approve needs the two digits from the browser.
   A 2xx answer without a decision is an error.
+- Demo mode ("Try Demo" on the lock screen, unpaired phones only) is for App Store review: fixed
+  codes and a simulated request every 15 s with `.invalid` server, held in memory. It needs no Face
+  ID, reads and writes no vault, Keychain, pairing or network; Settings hides PIN, auto-lock, pairing
+  and erase. Any lock (background, idle, Lock, Exit Demo) ends it.
 - No Android features without an iOS counterpart: no UnifiedPush, no credential provider/passkeys
   (dropped by decision), no `AccountManager` (replaced by the handoff).
 

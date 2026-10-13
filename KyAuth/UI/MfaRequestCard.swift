@@ -28,6 +28,11 @@ struct MfaRequestCard: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
+                if model.isDemo && !expired {
+                    Text("Demo: the sign-in screen shows \(challenge.matchDigits).")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.tint)
+                }
                 if expired {
                     Text("This request expired.")
                     Button("Dismiss") { model.dismissExpiredChallenge() }

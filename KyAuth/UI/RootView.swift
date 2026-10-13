@@ -19,7 +19,10 @@ struct RootView: View {
         }
         .tint(.accentColor)
         .background(ActivityTracker { model.recordActivity() })
-        .onReceive(Timer.publish(every: 5, on: .main, in: .common).autoconnect()) { _ in model.checkIdle() }
+        .onReceive(Timer.publish(every: 5, on: .main, in: .common).autoconnect()) { _ in
+            model.checkIdle()
+            model.tickDemo()
+        }
         .onReceive(NotificationCenter.default.publisher(for: UIScreen.capturedDidChangeNotification)) { _ in
             model.screenCaptured = ScreenCapture.isActive
         }

@@ -13,7 +13,17 @@ struct SettingsView: View {
         @Bindable var model = model
         NavigationStack {
             BusnesForm {
-                kyIdentitySection
+                if model.isDemo {
+                    Section {
+                        Button("Exit Demo") { model.lock() }
+                    } header: {
+                        Text("Demo Mode")
+                    } footer: {
+                        Text("Codes and sign-in requests here are simulated and kept in memory: none are saved or sent anywhere. Exit the demo to pair with KyIdentity.")
+                    }
+                } else {
+                    kyIdentitySection
+                }
                 if model.isPaired {
                     Section {
                         LabeledContent("Notifications", value: notificationText)
@@ -31,22 +41,24 @@ struct SettingsView: View {
                         Text("KyIdentity sends sign-in requests to this phone through Apple Push.")
                     }
                 }
-                Section {
-                    Picker("Auto-Lock", selection: $model.idleMinutes) {
-                        ForEach(IdleLock.minuteChoices, id: \.self) { minutes in
-                            Text(minutes == 60 ? "1 hour" : "\(minutes) minute\(minutes == 1 ? "" : "s")")
+                if !model.isDemo {
+                    Section {
+                        Picker("Auto-Lock", selection: $model.idleMinutes) {
+                            ForEach(IdleLock.minuteChoices, id: \.self) { minutes in
+                                Text(minutes == 60 ? "1 hour" : "\(minutes) minute\(minutes == 1 ? "" : "s")")
+                            }
                         }
+                        if model.pinEnabled {
+                            Button("Change PIN") { showPinSetup = true }
+                            Button("Turn Off PIN", role: .destructive) { model.removePin() }
+                        } else {
+                            Button("Set a PIN") { showPinSetup = true }
+                        }
+                    } header: {
+                        Text("Security")
+                    } footer: {
+                        Text("KyAuth locks when you leave it, and after the auto-lock time in the app. A PIN is asked after \(UserPresence.biometryName). Five wrong PINs erase KyAuth's data on this phone.")
                     }
-                    if model.pinEnabled {
-                        Button("Change PIN") { showPinSetup = true }
-                        Button("Turn Off PIN", role: .destructive) { model.removePin() }
-                    } else {
-                        Button("Set a PIN") { showPinSetup = true }
-                    }
-                } header: {
-                    Text("Security")
-                } footer: {
-                    Text("KyAuth locks when you leave it, and after the auto-lock time in the app. A PIN is asked after \(UserPresence.biometryName). Five wrong PINs erase KyAuth's data on this phone.")
                 }
                 Section {
                     Picker("Appearance", selection: $model.appearance) {
@@ -64,8 +76,10 @@ struct SettingsView: View {
                 } footer: {
                     Text("Codes are stored only on this phone, encrypted, with no backup or sync. If you lose the phone, use your KyIdentity recovery codes.")
                 }
-                Section {
-                    Button("Erase All Data", role: .destructive) { confirmErase = true }
+                if !model.isDemo {
+                    Section {
+                        Button("Erase All Data", role: .destructive) { confirmErase = true }
+                    }
                 }
             }
             .navigationTitle("Settings")

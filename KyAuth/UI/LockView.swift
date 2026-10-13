@@ -27,6 +27,9 @@ struct LockView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
+                    if !model.isPaired && model.pendingChallenge == nil {
+                        Button("Try Demo") { model.startDemo() }
+                    }
                 }
                 .padding(.horizontal, 24)
             }
