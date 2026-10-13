@@ -28,18 +28,16 @@ struct MfaRequestCard: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-                if model.isDemo && !expired {
-                    Text("Demo: the sign-in screen shows \(challenge.matchDigits).")
+                if let digits = model.demoBrowserDigits, !expired {
+                    Text("Demo: the sign-in screen shows \(digits).")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.tint)
                 }
                 if expired {
                     Text("This request expired.")
                     Button("Dismiss") { model.dismissExpiredChallenge() }
-                } else if challenge.options.isEmpty {
-                    typedApproval
                 } else {
-                    optionGrid
+                    typedApproval
                 }
             }
             .padding()
@@ -65,27 +63,6 @@ struct MfaRequestCard: View {
                 .background(Color.busnesBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .accessibilityLabel("Two-digit number")
             answerButtons(approveDisabled: !MfaMessage.isTwoDigits(digits)) { digits }
-        }
-    }
-
-    private var optionGrid: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Tap the number shown on the sign-in screen.")
-                .font(.subheadline)
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                ForEach(challenge.options, id: \.self) { option in
-                    Button {
-                        answer(approve: true, digits: option)
-                    } label: {
-                        Text(option)
-                            .font(.title.monospacedDigit().weight(.semibold))
-                            .frame(maxWidth: .infinity, minHeight: 56)
-                    }
-                    .buttonStyle(.bordered)
-                }
-            }
-            Button("Deny", role: .destructive) { answer(approve: false, digits: "") }
-                .frame(maxWidth: .infinity)
         }
     }
 

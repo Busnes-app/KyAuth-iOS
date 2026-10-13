@@ -18,6 +18,7 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 - `Totp/`: entries, generator, `otpauth://` parsing, `TotpVault`.
 - `Security/`: Keychain, `UserPresence`, PIN policy and store, `IdleLock`, `LocalWipe`.
 - `UI/`: SwiftUI screens.
+- `PrivacyInfo.xcprivacy`: the App Store privacy manifest.
 
 ## Local Contracts
 
@@ -29,6 +30,9 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   `docs/specs/2026-10-11-ios-signon-handoff.md`. Change either only together with its counterpart
   (KyIdentity-server, KyPost-for-Mac).
 - Release builds require HTTPS; debug builds also accept loopback HTTP.
+- `PrivacyInfo.xcprivacy` declares every required-reason API the app uses (now `UserDefaults`
+  CA92.1, `systemUptime` 35F9.1, file timestamps C617.1), no tracking and no collected data.
+  Adding a use from another category, or for another reason, updates it in the same change.
 - Device key: Secure Enclave P-256, `.privateKeyUsage` + `.userPresence`, replaced at every pairing
   (a failed re-pair leaves the phone unpaired). A software key exists only in the simulator.
 - Every signature and every vault unlock takes exactly one Face ID / passcode check; the evaluated
@@ -53,10 +57,12 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   a cover. Copied codes are local-only and expire at the end of their period.
 - Optional PIN after Face ID: delays 0/5/30/300 s, the fifth failure erases all local data.
 - Push MFA: a push must name this device and account, carry `purpose` and an expiry at most 10
-  minutes ahead; a payload `serverUrl` is ignored. Approve needs the two digits from the browser.
-  A 2xx answer without a decision is an error.
+  minutes ahead; a payload `serverUrl` is ignored. Approve needs the two digits typed from the
+  browser: the phone never holds the answer, so match or decoy numbers in a payload are dropped
+  and no choice of numbers is ever offered. A 2xx answer without a decision is an error.
 - Demo mode ("Try Demo" on the lock screen, unpaired phones only) is for App Store review: fixed
-  codes and a simulated request every 15 s with `.invalid` server, held in memory. It needs no Face
+  codes and a simulated request every 15 s with `.invalid` server, held in memory. With no browser,
+  the card names the number to type as demo text, kept in `AppModel` and never in the request. It needs no Face
   ID, reads and writes no vault, Keychain, pairing or network; Settings hides PIN, auto-lock, pairing
   and erase. Any lock (background, idle, Lock, Exit Demo) ends it.
 - The lock screen prompts for Face ID on its own only when paired or a vault file exists; a fresh
@@ -81,11 +87,17 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project KyAuth.xcodeproj \
-  -scheme KyAuth -destination 'platform=iOS Simulator,name=iPhone 17 Pro' CODE_SIGNING_ALLOWED=NO test
+  -scheme KyAuth -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' CODE_SIGNING_ALLOWED=NO test
 ```
 
 Not verifiable in the simulator, and not yet observed on hardware: APNs delivery, Secure Enclave
 signing, App Attest, Face ID prompts, the camera scanner, the sign-on round trip with KyPost.
+
+App Store screenshots: `scripts/capture-screenshots.sh [iphone|ipad|duo|all]` drives the demo
+through `KyAuthUITests/ScreenshotTests` (skipped unless `KYAUTH_SCREENSHOTS=1`) into
+`Distribution/Screenshots/` (iPhone 6.3", iPad 13", iPhone Duo outer and inner; light and dark).
+The Duo needs the iOS 27.1 simulator runtime and boots folded; its inner display is captured only
+after unfolding it by hand in DeviceHub.
 
 ## Child DOX Index
 

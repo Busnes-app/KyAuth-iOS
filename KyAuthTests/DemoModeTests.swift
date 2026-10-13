@@ -24,27 +24,23 @@ struct DemoModeTests {
         }
     }
 
-    @Test func challengeOffersTheMatchAmongThreeDecoys() {
+    @Test func browserDigitsAreTwoDigits() {
         for seed in 0..<200 {
             var generator = SeededGenerator(state: UInt64(seed))
-            let challenge = DemoMode.challenge(nowMs: 1_000, using: &generator)
-            #expect(challenge.options.count == 4)
-            #expect(challenge.options.contains(challenge.matchDigits))
-            #expect(challenge.options.allSatisfy(MfaMessage.isTwoDigits))
-            #expect(challenge.expiresAtEpochMs == 1_000 + DemoMode.pushLifetimeMs)
-            #expect(challenge.serverUrl == DemoMode.serverUrl)
+            #expect(MfaMessage.isTwoDigits(DemoMode.browserDigits(using: &generator)))
         }
+        let challenge = DemoMode.challenge(nowMs: 1_000)
+        #expect(challenge.expiresAtEpochMs == 1_000 + DemoMode.pushLifetimeMs)
+        #expect(challenge.serverUrl == DemoMode.serverUrl)
     }
 
     @Test func resultFollowsTheServerRules() {
-        var generator = SeededGenerator(state: 7)
-        let challenge = DemoMode.challenge(nowMs: 1_000_000, using: &generator)
+        let challenge = DemoMode.challenge(nowMs: 1_000_000)
         let live = Date(timeIntervalSince1970: 1_000)
-        let wrong = challenge.decoyDigits[0]
-        #expect(DemoMode.result(challenge, approve: true, digits: challenge.matchDigits, now: live) == "Sign-in approved")
-        #expect(DemoMode.result(challenge, approve: true, digits: wrong, now: live).hasPrefix("Sign-in denied"))
-        #expect(DemoMode.result(challenge, approve: false, digits: "", now: live) == "Sign-in denied")
-        #expect(DemoMode.result(challenge, approve: true, digits: challenge.matchDigits, now: .distantFuture) == "Sign-in request expired")
+        #expect(DemoMode.result(challenge, approve: true, digits: "42", browserDigits: "42", now: live) == "Sign-in approved")
+        #expect(DemoMode.result(challenge, approve: true, digits: "24", browserDigits: "42", now: live).hasPrefix("Sign-in denied"))
+        #expect(DemoMode.result(challenge, approve: false, digits: "", browserDigits: "42", now: live) == "Sign-in denied")
+        #expect(DemoMode.result(challenge, approve: true, digits: "42", browserDigits: "42", now: .distantFuture) == "Sign-in request expired")
     }
 
     @Test func demoRunsInMemoryAndLockingEndsIt() throws {
