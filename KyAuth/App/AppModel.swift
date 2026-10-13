@@ -36,6 +36,8 @@ final class AppModel {
     /// The App Store review demo: codes and requests in memory only. Never stored; locking ends it.
     private(set) var isDemo = false
     private var nextDemoPush: TimeInterval = 0
+    /// The number the demo's imaginary sign-in screen shows for the pending request.
+    private(set) var demoBrowserDigits: String?
 
     var idleMinutes: Int {
         didSet { UserDefaults.standard.set(idleMinutes, forKey: "idle-minutes") }
@@ -137,6 +139,7 @@ final class AppModel {
     func lock() {
         if isDemo {
             isDemo = false
+            demoBrowserDigits = nil
             pendingChallenge = MfaChallengeStore.load()
         }
         lockGeneration += 1
@@ -379,15 +382,17 @@ final class AppModel {
     func tickDemo() {
         guard isDemo, pendingChallenge == nil, ProcessInfo.processInfo.systemUptime >= nextDemoPush else { return }
         var generator = SystemRandomNumberGenerator()
-        pendingChallenge = DemoMode.challenge(nowMs: Int64(Date().timeIntervalSince1970 * 1000), using: &generator)
+        demoBrowserDigits = DemoMode.browserDigits(using: &generator)
+        pendingChallenge = DemoMode.challenge(nowMs: Int64(Date().timeIntervalSince1970 * 1000))
         notice = "Demo sign-in request received"
     }
 
     private func answerDemo(_ challenge: MfaChallenge?, approve: Bool, digits: String) {
         if let challenge, challenge.id == pendingChallenge?.id {
-            notice = DemoMode.result(challenge, approve: approve, digits: digits)
+            notice = DemoMode.result(challenge, approve: approve, digits: digits, browserDigits: demoBrowserDigits ?? "")
         }
         pendingChallenge = nil
+        demoBrowserDigits = nil
         nextDemoPush = ProcessInfo.processInfo.systemUptime + DemoMode.pushInterval
     }
 

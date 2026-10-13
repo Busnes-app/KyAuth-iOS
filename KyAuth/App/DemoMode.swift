@@ -17,13 +17,10 @@ enum DemoMode {
         ]
     }
 
-    /// A sign-in request offering the match among three decoys.
-    static func challenge(nowMs: Int64, using generator: inout some RandomNumberGenerator) -> MfaChallenge {
-        let numbers = (10...99).shuffled(using: &generator).prefix(4).map(String.init)
-        return MfaChallenge(
+    /// A sign-in request shaped like a KyIdentity push: no answer in it.
+    static func challenge(nowMs: Int64) -> MfaChallenge {
+        MfaChallenge(
             challengeId: "demo-\(UUID().uuidString.lowercased())",
-            matchDigits: numbers[0],
-            decoyDigits: Array(numbers.dropFirst()),
             serverUrl: serverUrl,
             username: username,
             purpose: "login",
@@ -31,10 +28,16 @@ enum DemoMode {
         )
     }
 
+    /// The number a browser would show for the request. A real phone never knows it; the demo has
+    /// no browser, so the request card tells the reviewer what to type.
+    static func browserDigits(using generator: inout some RandomNumberGenerator) -> String {
+        String(Int.random(in: 10...99, using: &generator))
+    }
+
     /// What the server would have decided, as the toast says it.
-    static func result(_ challenge: MfaChallenge, approve: Bool, digits: String, now: Date = Date()) -> String {
+    static func result(_ challenge: MfaChallenge, approve: Bool, digits: String, browserDigits: String, now: Date = Date()) -> String {
         if challenge.isExpired(now: now) { return "Sign-in request expired" }
         if !approve { return "Sign-in denied" }
-        return digits == challenge.matchDigits ? "Sign-in approved" : "Sign-in denied: the number did not match"
+        return digits == browserDigits ? "Sign-in approved" : "Sign-in denied: the number did not match"
     }
 }

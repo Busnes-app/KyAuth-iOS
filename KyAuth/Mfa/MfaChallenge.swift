@@ -2,20 +2,12 @@ import Foundation
 
 struct MfaChallenge: Codable, Equatable, Identifiable {
     let challengeId: String
-    var matchDigits: String = ""
-    var decoyDigits: [String] = []
     let serverUrl: String
     var username: String?
     let purpose: String
     let expiresAtEpochMs: Int64
 
     var id: String { challengeId }
-
-    /// The match and decoys, sorted, when the push carried them. KyIdentity currently sends none:
-    /// the user types the number the browser shows.
-    var options: [String] {
-        Array(Set(([matchDigits] + decoyDigits).filter { !$0.isEmpty })).sorted()
-    }
 
     var purposeText: String { purpose == "step_up" ? "Confirm a sensitive action" : "Sign in" }
 
@@ -70,11 +62,11 @@ enum MfaMessage {
 /// Parses a KyIdentity push (APNs custom keys, all strings) into a challenge for this pairing only.
 enum MfaPushParser {
     static let maxExpiresAfterMs: Int64 = 10 * 60 * 1000
-    static let maxDecoys = 3
 
     /// A push for another device or account, an unknown purpose, or an expiry that is absent, past or
     /// more than ten minutes ahead is refused, never defaulted or clamped. A `serverUrl` in the
-    /// payload is ignored: answers only ever go to the paired server.
+    /// payload is ignored: answers only ever go to the paired server. So is any match or decoy
+    /// number: the phone never holds the answer, the user types the number the browser shows.
     static func parse(_ data: [AnyHashable: Any], paired: PairedAccount?, now: Date = Date()) throws -> MfaChallenge {
         guard let paired, !paired.serverUrl.isBlank, !paired.deviceId.isBlank else {
             throw PairingError.invalid("KyAuth is not paired with a server")
@@ -90,15 +82,6 @@ enum MfaPushParser {
         guard let challengeId = value("challengeId", "challenge_id", "id") else {
             throw PairingError.invalid("MFA push payload missing challengeId")
         }
-        let match = value("matchDigits", "match_digits", "match") ?? ""
-        guard match.isEmpty || MfaMessage.isTwoDigits(match) else { throw PairingError.invalid("Malformed match digits") }
-
-        var decoys: [String] = []
-        for decoy in parseDecoys(value("decoyDigits", "decoy_digits", "decoys"))
-        where MfaMessage.isTwoDigits(decoy) && decoy != match && !decoys.contains(decoy) && decoys.count < maxDecoys {
-            decoys.append(decoy)
-        }
-
         guard let purpose = value("purpose"), MfaMessage.purposes.contains(purpose) else {
             throw PairingError.invalid("Unknown push purpose")
         }
@@ -110,23 +93,11 @@ enum MfaPushParser {
 
         return MfaChallenge(
             challengeId: challengeId,
-            matchDigits: match,
-            decoyDigits: decoys,
             serverUrl: paired.serverUrl.trimmingCharacters(in: .whitespacesAndNewlines),
             username: value("username", "user"),
             purpose: purpose,
             expiresAtEpochMs: expiresAt
         )
-    }
-
-    private static func parseDecoys(_ raw: String?) -> [String] {
-        guard let raw else { return [] }
-        if raw.hasPrefix("["),
-           let array = (try? JSONSerialization.jsonObject(with: Data(raw.utf8))) as? [Any] {
-            return array.compactMap { ($0 as? String)?.trimmedNonBlank }
-        }
-        return raw.split(whereSeparator: { $0 == "," || $0 == "|" || $0 == " " })
-            .compactMap { String($0).trimmedNonBlank }
     }
 }
 

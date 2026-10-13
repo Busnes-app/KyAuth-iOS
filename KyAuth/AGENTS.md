@@ -57,10 +57,12 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   a cover. Copied codes are local-only and expire at the end of their period.
 - Optional PIN after Face ID: delays 0/5/30/300 s, the fifth failure erases all local data.
 - Push MFA: a push must name this device and account, carry `purpose` and an expiry at most 10
-  minutes ahead; a payload `serverUrl` is ignored. Approve needs the two digits from the browser.
-  A 2xx answer without a decision is an error.
+  minutes ahead; a payload `serverUrl` is ignored. Approve needs the two digits typed from the
+  browser: the phone never holds the answer, so match or decoy numbers in a payload are dropped
+  and no choice of numbers is ever offered. A 2xx answer without a decision is an error.
 - Demo mode ("Try Demo" on the lock screen, unpaired phones only) is for App Store review: fixed
-  codes and a simulated request every 15 s with `.invalid` server, held in memory. It needs no Face
+  codes and a simulated request every 15 s with `.invalid` server, held in memory. With no browser,
+  the card names the number to type as demo text, kept in `AppModel` and never in the request. It needs no Face
   ID, reads and writes no vault, Keychain, pairing or network; Settings hides PIN, auto-lock, pairing
   and erase. Any lock (background, idle, Lock, Exit Demo) ends it.
 - The lock screen prompts for Face ID on its own only when paired or a vault file exists; a fresh

@@ -70,7 +70,6 @@ struct MfaPushParserTests {
         let challenge = try MfaPushParser.parse(push(), paired: paired, now: now)
         #expect(challenge.challengeId == "c-1")
         #expect(challenge.serverUrl == "https://id.example.com")
-        #expect(challenge.options.isEmpty)
         #expect(challenge.purposeText == "Sign in")
     }
 
@@ -80,7 +79,7 @@ struct MfaPushParserTests {
             push(["purpose": "session"]), push(removing: ["purpose"]),
             push(["expiresAtEpochMs": String(nowMs - 1)]), push(removing: ["expiresAtEpochMs"]),
             push(["expiresAtEpochMs": String(nowMs + 10 * 60 * 1000 + 1)]),
-            push(["matchDigits": "4"]), push(removing: ["challengeId"]),
+            push(removing: ["challengeId"]),
         ] {
             #expect(throws: PairingError.self) { try MfaPushParser.parse(bad, paired: paired, now: now) }
         }
@@ -90,14 +89,14 @@ struct MfaPushParserTests {
         #expect(throws: PairingError.self) { try MfaPushParser.parse(push(), paired: noUser, now: now) }
     }
 
-    @Test func decoysAreTwoDigitDistinctAndCapped() throws {
+    /// The phone never holds the answer: match or decoy numbers in a payload are dropped, so the
+    /// stored challenge cannot show them.
+    @Test func answerDigitsInAPayloadAreIgnored() throws {
         let challenge = try MfaPushParser.parse(
-            push(["matchDigits": "42", "decoyDigits": "42,11,11,x,7,88,55,99"]), paired: paired, now: now
+            push(["matchDigits": "42", "decoyDigits": "11,88,55"]), paired: paired, now: now
         )
-        #expect(challenge.decoyDigits == ["11", "88", "55"])
-        #expect(challenge.options == ["11", "42", "55", "88"])
-        let json = try MfaPushParser.parse(push(["decoyDigits": #"["12","34"]"#]), paired: paired, now: now)
-        #expect(json.decoyDigits == ["12", "34"])
+        let stored = String(decoding: try JSONEncoder().encode(challenge), as: UTF8.self)
+        #expect(!stored.contains("Digits"))
     }
 
     @Test func countdown() {
