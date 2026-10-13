@@ -19,7 +19,7 @@ struct VaultView: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            BusnesList {
                 if model.needsPushRefresh {
                     Section {
                         ReconnectBanner()

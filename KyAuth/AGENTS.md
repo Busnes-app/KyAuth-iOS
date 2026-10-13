@@ -60,8 +60,12 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 
 ## Work Guidance
 
-- Native iOS look: system `TabView` (Codes, Settings), forms and lists, system light/dark with the
-  Busnes orange accent (`#bf3f18` light, `#f5865f` dark). No suite theme picker.
+- Native iOS look: system `TabView` (Codes, Settings), forms and lists, Busnes palettes: background
+  `BusnesBackground` (`#f8f6f0` / `#182326`), rows and cards `BusnesSurface` (`#ffffff` /
+  `#1f2b2e`), orange accent (`#bf3f18` / `#f5865f`); text keeps system label colors. Use
+  `BusnesForm`/`BusnesList` instead of `Form`/`List`.
+- Appearance setting: System (default, follows iOS), Busnes Light, Busnes Dark, set on the window
+  (`UI/Appearance.swift`). No other themes: Android's other 15 themes are not ported, by decision.
 - No third-party dependencies. Keep security checks fail-closed and add a focused test for
   non-trivial logic.
 

@@ -12,7 +12,7 @@ struct SettingsView: View {
     var body: some View {
         @Bindable var model = model
         NavigationStack {
-            Form {
+            BusnesForm {
                 kyIdentitySection
                 if model.isPaired {
                     Section {
@@ -47,6 +47,13 @@ struct SettingsView: View {
                     Text("Security")
                 } footer: {
                     Text("KyAuth locks when you leave it, and after the auto-lock time in the app. A PIN is asked after \(UserPresence.biometryName). Five wrong PINs erase KyAuth's data on this phone.")
+                }
+                Section {
+                    Picker("Appearance", selection: $model.appearance) {
+                        ForEach(Appearance.allCases) { Text($0.title).tag($0) }
+                    }
+                } footer: {
+                    Text("System switches between Busnes Light and Busnes Dark with this iPhone's setting.")
                 }
                 Section {
                     LabeledContent("Version", value: Bundle.main.versionString)
@@ -148,7 +155,7 @@ struct PinSetupView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            BusnesForm {
                 Section {
                     SecureField("New PIN", text: $pin)
                         .keyboardType(.numberPad)

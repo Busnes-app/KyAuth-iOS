@@ -30,6 +30,7 @@ struct LockView: View {
                 }
                 .padding(.horizontal, 24)
             }
+            .background(Color.busnesBackground)
             .navigationBarTitleDisplayMode(.inline)
         }
         .task {
@@ -50,7 +51,7 @@ struct PinUnlockView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            BusnesForm {
                 Section {
                     SecureField("PIN", text: $pin)
                         .keyboardType(.numberPad)

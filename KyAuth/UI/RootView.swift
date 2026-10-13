@@ -23,7 +23,11 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIScreen.capturedDidChangeNotification)) { _ in
             model.screenCaptured = ScreenCapture.isActive
         }
-        .onAppear { model.screenCaptured = ScreenCapture.isActive }
+        .onAppear {
+            model.screenCaptured = ScreenCapture.isActive
+            model.appearance.apply()
+        }
+        .onChange(of: model.appearance) { _, appearance in appearance.apply() }
         .sheet(item: Binding(get: { model.signOnRequest.map(SignOnSheetItem.init) }, set: { _ in })) { item in
             SignOnSheet(request: item.request)
         }
@@ -47,7 +51,7 @@ private struct SignOnSheetItem: Identifiable {
 struct PrivacyCover: View {
     var body: some View {
         ZStack {
-            Rectangle().fill(.background)
+            Rectangle().fill(Color.busnesBackground)
             BrandMark(size: 72)
         }
         .ignoresSafeArea()

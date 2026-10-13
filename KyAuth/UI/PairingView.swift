@@ -17,7 +17,7 @@ struct PairingView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            BusnesForm {
                 Section {
                     Button("Scan Pairing QR Code", systemImage: "qrcode.viewfinder") { scanning = true }
                     Button("Paste Pairing Link", systemImage: "doc.on.clipboard") { pasteLink() }

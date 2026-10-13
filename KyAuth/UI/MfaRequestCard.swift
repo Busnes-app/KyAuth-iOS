@@ -38,7 +38,7 @@ struct MfaRequestCard: View {
                 }
             }
             .padding()
-            .background(.background.secondary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(Color.busnesSurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .disabled(working)
     }
@@ -57,7 +57,7 @@ struct MfaRequestCard: View {
                     digits = String(value.filter(\.isNumber).prefix(2))
                 }
                 .padding(.vertical, 6)
-                .background(.background, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(Color.busnesBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .accessibilityLabel("Two-digit number")
             answerButtons(approveDisabled: !MfaMessage.isTwoDigits(digits)) { digits }
         }

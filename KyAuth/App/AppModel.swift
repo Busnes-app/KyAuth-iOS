@@ -38,6 +38,10 @@ final class AppModel {
         didSet { UserDefaults.standard.set(idleMinutes, forKey: "idle-minutes") }
     }
 
+    var appearance: Appearance {
+        didSet { UserDefaults.standard.set(appearance.rawValue, forKey: Appearance.defaultsKey) }
+    }
+
     private var vaultKey: SymmetricKey?
     private var pinContext: LAContext?
     private var idleLock = IdleLock()
@@ -53,6 +57,7 @@ final class AppModel {
         self.account = account
         self.makeHandoff = makeHandoff
         idleMinutes = IdleLock.validatedMinutes(UserDefaults.standard.integer(forKey: "idle-minutes"))
+        appearance = Appearance(stored: UserDefaults.standard.string(forKey: Appearance.defaultsKey))
     }
 
     // MARK: - Lock
@@ -461,6 +466,7 @@ final class AppModel {
         pushState = PushState()
         pinEnabled = false
         idleMinutes = IdleLock.defaultMinutes
+        appearance = .system
         UIApplication.shared.registerForRemoteNotifications()
     }
 

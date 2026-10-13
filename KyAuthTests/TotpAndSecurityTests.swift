@@ -181,3 +181,12 @@ struct IdleLockTests {
         #expect(IdleLock.validatedMinutes(0) == 5)
     }
 }
+
+struct AppearanceTests {
+    @Test func storedValueFallsBackToSystem() {
+        #expect(Appearance(stored: nil) == .system)
+        #expect(Appearance(stored: "Ocean") == .system)
+        #expect(Appearance(stored: "light") == .light)
+        #expect(Appearance(stored: "dark") == .dark)
+    }
+}
