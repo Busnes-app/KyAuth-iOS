@@ -4,6 +4,70 @@ import Testing
 @testable import KyAuth
 
 @MainActor
+struct PairingFormTests {
+    private func draft() -> PairingDraft {
+        PairingDraft(serverUrl: "https://id.example.com", userId: "u-1", pinCode: "123456", deviceName: "Test")
+    }
+
+    /// Pairing by link or by hand means leaving KyAuth, which locks it; the form must survive that.
+    @Test func aLockKeepsTheFormAndShowsItAgain() {
+        let model = AppModel(account: nil, pushState: PushState())
+        model.startDemo() // the one way to an unlocked model without Face ID
+        model.pairingDraft = draft()
+        model.lock()
+        #expect(model.resumePairing)
+        #expect(model.pairingDraft == draft())
+
+        // The form's views going away with the lock is not the user closing it.
+        model.pairingFormClosed()
+        #expect(model.resumePairing)
+        #expect(model.pairingDraft == draft())
+    }
+
+    @Test func closingTheFormWhileUnlockedForgetsIt() {
+        let model = AppModel(account: nil, pushState: PushState())
+        model.startDemo()
+        model.pairingDraft = draft()
+        model.pairingFormClosed()
+        #expect(model.pairingDraft == nil)
+        #expect(!model.resumePairing)
+    }
+
+    @Test func noFormWasOpenSoNothingComesBack() {
+        let model = AppModel(account: nil, pushState: PushState())
+        model.startDemo()
+        model.lock()
+        #expect(!model.resumePairing)
+    }
+
+    @Test func aKnownPushTokenIsUsedAtOnce() async throws {
+        let model = AppModel(account: nil, pushState: PushState(latestToken: "ab"))
+        #expect(try await model.pushTokenForPairing(timeout: .zero) == "ab")
+    }
+
+    @Test func pairingStopsWaitingForApplePush() async {
+        let model = AppModel(account: nil, pushState: PushState())
+        await #expect(throws: PairingError.invalid("Apple Push did not answer. Check the connection, then try again.")) {
+            try await model.pushTokenForPairing(timeout: .milliseconds(300))
+        }
+    }
+
+    @Test func anApplePushRefusalEndsTheWaitWithItsReason() async {
+        let model = AppModel(account: nil, pushState: PushState())
+        let refusal = URLError(.notConnectedToInternet)
+        Task {
+            try await Task.sleep(for: .milliseconds(100))
+            model.didFailToRegisterForPush(refusal)
+        }
+        let start = ContinuousClock.now
+        await #expect(throws: PairingError.invalid("Apple Push is unavailable: \(refusal.localizedDescription)")) {
+            try await model.pushTokenForPairing(timeout: .seconds(10))
+        }
+        #expect(ContinuousClock.now - start < .seconds(5))
+    }
+}
+
+@MainActor
 struct QrPairingParserTests {
     let future = Int64(Date().timeIntervalSince1970) + 90
 

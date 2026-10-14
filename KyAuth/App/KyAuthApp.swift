@@ -65,7 +65,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        model.notice = "Apple Push is unavailable: \(error.localizedDescription)"
+        model.didFailToRegisterForPush(error)
     }
 
     func userNotificationCenter(

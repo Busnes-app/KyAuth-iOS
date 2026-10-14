@@ -8,11 +8,40 @@
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
 
-	<!-- Empty: KyAuth talks only to the KyIdentity server the user paired it with, and the
-	     developer runs no server, analytics or crash reporter. If that changes, this array and
-	     the App Store Connect privacy label change with it. -->
+	<!-- KyAuth talks only to the KyIdentity server the user paired it with, which the user's
+	     organization runs. That server sends sign-in requests through the APNs relay Worker the
+	     developer runs (KyIdentity-server workers/apns), which receives this phone's APNs token
+	     (Device ID) and KyIdentity's user and device IDs (User ID), and keeps tokens beyond the
+	     single send. Both serve app functionality only and are linked to the user, since they
+	     are part of signing in. No tracking, analytics or crash reporter. Change this
+	     together with the App Store Connect privacy label (Distribution/AppStore/app-privacy.md). -->
 	<key>NSPrivacyCollectedDataTypes</key>
-	<array/>
+	<array>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeDeviceID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeUserID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
 
 	<!-- Every required-reason API in the app. Re-audit when adding one (KyAuth/AGENTS.md). -->
 	<key>NSPrivacyAccessedAPITypes</key>

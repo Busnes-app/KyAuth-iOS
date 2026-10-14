@@ -23,14 +23,28 @@ enum UserPresence {
     }
 
     static var biometryName: String {
+        switch biometryType {
+        case .faceID: "Face ID"
+        case .touchID: "Touch ID"
+        case .opticID: "Optic ID"
+        default: "Passcode"
+        }
+    }
+
+    /// The SF Symbol for `biometryName`.
+    static var biometrySymbol: String {
+        switch biometryType {
+        case .faceID: "faceid"
+        case .touchID: "touchid"
+        case .opticID: "opticid"
+        default: "lock"
+        }
+    }
+
+    private static var biometryType: LABiometryType {
         let context = LAContext()
         _ = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
-        switch context.biometryType {
-        case .faceID: return "Face ID"
-        case .touchID: return "Touch ID"
-        case .opticID: return "Optic ID"
-        default: return "Passcode"
-        }
+        return context.biometryType
     }
 
     static func evaluate(reason: String) async throws -> LAContext {

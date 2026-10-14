@@ -34,24 +34,49 @@ enum PinPolicy {
 
 struct PinFailureState: Codable, Equatable {
     var failedAttempts = 0
-    var retryAfterEpochSeconds: Int64 = 0
+    /// System uptime (`ProcessInfo.systemUptime`) before which no PIN is accepted. Uptime ignores
+    /// clock changes but restarts at boot; `normalized` handles the restart.
+    var retryAfterUptime: TimeInterval = 0
+}
+
+extension PinFailureState {
+    /// Records from before the uptime change carry `retryAfterEpochSeconds` instead. Their failure
+    /// count must survive, or an update would hand back the attempts the wipe ladder took away. The
+    /// missing deadline decodes as far in the future, which `PinFailurePolicy.normalized` turns into
+    /// the full delay for that count, starting now.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        failedAttempts = try container.decode(Int.self, forKey: .failedAttempts)
+        retryAfterUptime = try container.decodeIfPresent(TimeInterval.self, forKey: .retryAfterUptime)
+            ?? .greatestFiniteMagnitude
+    }
 }
 
 /// Delays of 0, 5, 30 and 300 seconds after failures one to four; the fifth failure wipes.
+/// Every `now` is system uptime, so setting the clock forward skips no delay.
 enum PinFailurePolicy {
     static let wipeAfterAttempts = 5
 
-    static func registerFailure(_ state: PinFailureState, now: Int64) -> PinFailureState {
+    static func registerFailure(_ state: PinFailureState, now: TimeInterval) -> PinFailureState {
         let attempts = state.failedAttempts + 1
-        return PinFailureState(failedAttempts: attempts, retryAfterEpochSeconds: now + delaySeconds(attempts))
+        return PinFailureState(failedAttempts: attempts, retryAfterUptime: now + delaySeconds(attempts))
     }
 
-    static func mayTry(_ state: PinFailureState, now: Int64) -> Bool {
-        state.failedAttempts < wipeAfterAttempts && now >= state.retryAfterEpochSeconds
+    /// After a restart uptime begins again near zero, so a deadline further away than the delay itself
+    /// can only come from before the restart: the full delay starts again from now. A restart never
+    /// shortens a delay.
+    static func normalized(_ state: PinFailureState, now: TimeInterval) -> PinFailureState {
+        let delay = delaySeconds(state.failedAttempts)
+        guard state.retryAfterUptime - now > delay else { return state }
+        return PinFailureState(failedAttempts: state.failedAttempts, retryAfterUptime: now + delay)
     }
 
-    static func secondsUntilRetry(_ state: PinFailureState, now: Int64) -> Int64 {
-        max(0, state.retryAfterEpochSeconds - now)
+    static func mayTry(_ state: PinFailureState, now: TimeInterval) -> Bool {
+        state.failedAttempts < wipeAfterAttempts && now >= state.retryAfterUptime
+    }
+
+    static func secondsUntilRetry(_ state: PinFailureState, now: TimeInterval) -> Int64 {
+        Int64(max(0, (state.retryAfterUptime - now).rounded(.up)))
     }
 
     static func attemptsRemaining(_ state: PinFailureState) -> Int {
@@ -62,7 +87,7 @@ enum PinFailurePolicy {
         state.failedAttempts >= wipeAfterAttempts
     }
 
-    private static func delaySeconds(_ attempt: Int) -> Int64 {
+    private static func delaySeconds(_ attempt: Int) -> TimeInterval {
         switch attempt {
         case 2: 5
         case 3: 30
@@ -88,6 +113,10 @@ enum PinStore {
 
     /// Whether a PIN is set; readable without a prompt.
     static var isEnabled: Bool { Keychain.exists(enabledAccount) }
+
+    /// False when the PIN is on but its verifier is gone: iOS destroys it with the passcode, along
+    /// with the vault key and the device key it guarded, so no PIN can ever match again.
+    static var hasVerifier: Bool { Keychain.exists(verifierAccount) }
 
     static func set(_ pin: String) throws {
         var salt = Data(count: 16)
