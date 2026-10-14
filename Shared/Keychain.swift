@@ -20,11 +20,12 @@ enum Keychain {
     static let service = "org.kysecurity.authenticator"
 
     /// Readable after first unlock: push handling may need the pairing before the app is opened.
-    static func set(_ data: Data, for account: String) throws {
+    static func set(_ data: Data, for account: String, accessGroup: String? = nil) throws {
         delete(account)
         var query = baseQuery(account)
         query[kSecValueData as String] = data
         query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        if let accessGroup { query[kSecAttrAccessGroup as String] = accessGroup }
         let status = SecItemAdd(query as CFDictionary, nil)
         guard status == errSecSuccess else { throw KeychainError.status(status) }
     }
@@ -107,5 +108,25 @@ enum KeychainCodable {
 
     static func save<T: Encodable>(_ value: T, _ account: String) throws {
         try Keychain.set(try JSONEncoder().encode(value), for: account)
+    }
+}
+
+/// This pairing's push keys, in the one access group KyAuth shares with its notification service
+/// extension. Every other item stays in KyAuth's own group.
+enum PushKeyStore {
+    static let accessGroup = "group.org.kysecurity.authenticator.push"
+    private static let account = "push-keys"
+
+    /// nil only for a pairing made without keys; a Keychain failure throws instead.
+    static func load() throws -> PushKeys? {
+        try Keychain.get(account).map(PushKeys.init(stored:))
+    }
+
+    static func save(_ keys: PushKeys) throws {
+        try Keychain.set(keys.stored, for: account, accessGroup: accessGroup)
+    }
+
+    static func delete() {
+        Keychain.delete(account)
     }
 }

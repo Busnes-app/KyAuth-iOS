@@ -3,7 +3,8 @@ import Foundation
 private let levels: Set<String> = ["none", "appattest"]
 
 /// Registers this phone with KyIdentity. The request always names `platform: "ios"`: an omitted
-/// platform is stored as Android, and its pushes would go to FCM with an APNs token.
+/// platform is stored as Android, and its pushes would go to FCM with an APNs token. It always sends
+/// the push keys, so KyIdentity seals every push to this phone.
 struct PairingClient {
     var http = HTTPClient.shared
 
@@ -12,13 +13,14 @@ struct PairingClient {
         deviceName: String,
         deviceIdentifier: String,
         pushToken: String,
+        pushKeys: PushKeys,
         publicKey: String,
         appAttest: AppAttestation?
     ) async throws -> PairedAccount {
         let endpoint = try PairingEndpoint.validatedRegistrationUrl(pairing.serverUrl, pairing.registrationUrl)
         let request = Self.requestBody(
             pairing: pairing, deviceName: deviceName, deviceIdentifier: deviceIdentifier,
-            pushToken: pushToken, publicKey: publicKey, appAttest: appAttest
+            pushToken: pushToken, pushKeys: pushKeys, publicKey: publicKey, appAttest: appAttest
         )
         let response = try await http.postJSON(endpoint, request)
         guard response.isSuccess, response.json["success"] as? Bool == true else {
@@ -32,6 +34,7 @@ struct PairingClient {
         deviceName: String,
         deviceIdentifier: String,
         pushToken: String,
+        pushKeys: PushKeys,
         publicKey: String,
         appAttest: AppAttestation?
     ) -> [String: Any] {
@@ -41,6 +44,8 @@ struct PairingClient {
             "platform": "ios",
             "publicKey": publicKey,
             "pushToken": pushToken,
+            "pushP256dh": pushKeys.p256dh,
+            "pushAuth": pushKeys.authSecret,
         ]
         if let token = pairing.pairingToken, !token.isBlank { body["pairingToken"] = token }
         if let pin = pairing.pinCode, !pin.isBlank { body["pinCode"] = pin }
