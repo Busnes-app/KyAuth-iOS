@@ -173,19 +173,22 @@ struct PairingEndpointTests {
 struct PairingClientTests {
     let pairing = try! QrPairing(serverUrl: "https://id.example.com/", pairingToken: "pt", userId: "u-1", username: "ada")
 
-    @Test func requestAlwaysNamesIosAndCarriesAppAttest() {
+    @Test func requestAlwaysNamesIosAndCarriesAppAttestAndPushKeys() throws {
+        let keys = try PushKeys(stored: PushVectors.receiverStored)
         let body = PairingClient.requestBody(
             pairing: pairing, deviceName: " Ada's iPhone ", deviceIdentifier: "inst-1", pushToken: "abcd",
-            publicKey: "PK", appAttest: AppAttestation(keyId: "kid", attestation: "obj")
+            pushKeys: keys, publicKey: "PK", appAttest: AppAttestation(keyId: "kid", attestation: "obj")
         )
         #expect(body["platform"] as? String == "ios")
         #expect(body["deviceName"] as? String == "Ada's iPhone")
         #expect(body["pushToken"] as? String == "abcd")
         #expect(body["pairingToken"] as? String == "pt")
         #expect(body["pushTransport"] == nil)
+        #expect(body["pushP256dh"] as? String == PushVectors.receiverP256dh)
+        #expect(body["pushAuth"] as? String == PushVectors.auth)
         #expect((body["appAttest"] as? [String: String]) == ["keyId": "kid", "attestation": "obj"])
         let plain = PairingClient.requestBody(
-            pairing: pairing, deviceName: "x", deviceIdentifier: "i", pushToken: "t", publicKey: "PK", appAttest: nil
+            pairing: pairing, deviceName: "x", deviceIdentifier: "i", pushToken: "t", pushKeys: keys, publicKey: "PK", appAttest: nil
         )
         #expect(plain["appAttest"] == nil)
     }
@@ -231,25 +234,39 @@ struct PairingClientTests {
 
 @MainActor
 struct PushRefreshTests {
-    // Golden vector shared with KyIdentity-server and KyAuth Android (relay transport, no Web Push keys).
+    // Golden vectors shared with KyIdentity-server and KyAuth Android (relay transport).
     @Test func messageMatchesGoldenVector() throws {
         let message = try PushRefreshClient.message(
-            serverUrl: "https://id.example.com", deviceId: "d-456", issuedAtMs: 1_791_331_200_000, pushToken: "fcm-token-1"
+            serverUrl: "https://id.example.com", deviceId: "d-456", issuedAtMs: 1_791_331_200_000, pushToken: "fcm-token-1", keys: nil
         )
         #expect(String(decoding: message, as: UTF8.self) ==
             "kyidentity-push-token-v2|https://id.example.com|d-456|1791331200000|fcm|" +
             "3cfaa3f1d62d114805029366153fbb440a2d4e4b56406a04830579ac65db6a5c||")
+        let sealed = try PushRefreshClient.message(
+            serverUrl: "https://id.example.com", deviceId: "d-456", issuedAtMs: 1_791_331_200_000, pushToken: "fcm-token-1",
+            keys: PushKeys(stored: PushVectors.receiverStored)
+        )
+        #expect(String(decoding: sealed, as: UTF8.self) ==
+            "kyidentity-push-token-v2|https://id.example.com|d-456|1791331200000|fcm|" +
+            "3cfaa3f1d62d114805029366153fbb440a2d4e4b56406a04830579ac65db6a5c|" +
+            "BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4|BTBZMqHH6r4Tts7J_aSIgg")
     }
 
-    @Test func refusesSeparatorAndOmitsWebPushKeys() {
+    @Test func refusesSeparatorAndSendsWebPushKeysOnlyWhenPaired() throws {
         #expect(throws: PairingError.self) {
-            try PushRefreshClient.message(serverUrl: "https://id.example.com", deviceId: "d|1", issuedAtMs: 1, pushToken: "t")
+            try PushRefreshClient.message(serverUrl: "https://id.example.com", deviceId: "d|1", issuedAtMs: 1, pushToken: "t", keys: nil)
         }
-        let body = PushRefreshClient.requestBody(pushToken: "t", issuedAtMs: 7, signature: Data([1, 2]))
+        let body = PushRefreshClient.requestBody(pushToken: "t", keys: nil, issuedAtMs: 7, signature: Data([1, 2]))
         #expect(body["pushTransport"] as? String == "fcm")
         #expect(body["issuedAt"] as? Int64 == 7)
         #expect(body["signature"] as? String == "AQI=")
         #expect(body["pushP256dh"] == nil)
+        #expect(body["pushAuth"] == nil)
+        let sealed = PushRefreshClient.requestBody(
+            pushToken: "t", keys: try PushKeys(stored: PushVectors.receiverStored), issuedAtMs: 7, signature: Data([1, 2])
+        )
+        #expect(sealed["pushP256dh"] as? String == PushVectors.receiverP256dh)
+        #expect(sealed["pushAuth"] as? String == PushVectors.auth)
     }
 
     @Test func tokenIsLowercaseHexAndRefreshFollowsRotation() {

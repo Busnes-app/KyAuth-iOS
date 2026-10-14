@@ -253,12 +253,16 @@ final class AppModel {
         clearPairingState()
         do {
             let publicKey = try DeviceSigningKey.regenerate().base64EncodedString()
+            // Stored before KyIdentity learns them: it seals every push to this pairing from then on.
+            let pushKeys = PushKeys.generate()
+            try PushKeyStore.save(pushKeys)
             let attestation = await AppAttestor.attest(credential: pairing.credential, publicKey: publicKey)
             let paired = try await PairingClient().register(
                 pairing: pairing,
                 deviceName: deviceName,
                 deviceIdentifier: PairingStore.deviceIdentifier(),
                 pushToken: pushToken,
+                pushKeys: pushKeys,
                 publicKey: publicKey,
                 appAttest: attestation
             )
@@ -271,6 +275,7 @@ final class AppModel {
             _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
         } catch {
             DeviceSigningKey.delete()
+            PushKeyStore.delete()
             throw error
         }
     }
@@ -309,6 +314,7 @@ final class AppModel {
 
     private func clearPairingState() {
         PairingStore.clear()
+        PushKeyStore.delete()
         MfaChallengeStore.clear()
         PushStore.update { $0.registeredToken = nil }
         pushState = PushStore.load()
@@ -336,13 +342,14 @@ final class AppModel {
         guard let account, let token = pushState.latestToken else { return }
         do {
             let issuedAt = Int64(Date().timeIntervalSince1970 * 1000)
+            let keys = try PushKeyStore.load()
             let message = try PushRefreshClient.message(
-                serverUrl: account.serverUrl, deviceId: account.deviceId, issuedAtMs: issuedAt, pushToken: token
+                serverUrl: account.serverUrl, deviceId: account.deviceId, issuedAtMs: issuedAt, pushToken: token, keys: keys
             )
             let signature = try await signWithDeviceKey(message, reason: "Reconnect KyAuth sign-in requests")
             try await PushRefreshClient().refresh(
                 serverUrl: account.serverUrl, deviceId: account.deviceId,
-                pushToken: token, issuedAtMs: issuedAt, signature: signature.derRepresentation
+                pushToken: token, keys: keys, issuedAtMs: issuedAt, signature: signature.derRepresentation
             )
             PushStore.update { $0.registeredToken = token }
             pushState = PushStore.load()
@@ -354,10 +361,12 @@ final class AppModel {
         }
     }
 
-    /// The one receive path for a KyIdentity push: parse against this pairing, save, show.
+    /// The one receive path for a KyIdentity push: open it with this pairing's keys, parse against
+    /// this pairing, save, show.
     func handlePush(_ userInfo: [AnyHashable: Any]) {
-        guard userInfo["type"] as? String == "mfa_challenge",
-              let challenge = try? MfaPushParser.parse(userInfo, paired: account)
+        guard let fields = try? PushPayload.fields(userInfo, keys: PushKeyStore.load()),
+              fields["type"] as? String == "mfa_challenge",
+              let challenge = try? MfaPushParser.parse(fields, paired: account)
         else { return }
         MfaChallengeStore.save(challenge)
         pendingChallenge = challenge

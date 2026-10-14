@@ -16,7 +16,10 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 - `Mfa/`: push parsing, the signed response message, the pending-request store, `MfaResponseClient`.
 - `SignOn/`: `DeviceAssertion`, `TokenClient`, `SignOnHandoff` + `TrustedConsumers`.
 - `Totp/`: entries, generator, `otpauth://` parsing, `TotpVault`.
-- `Security/`: Keychain, `UserPresence`, PIN policy and store, `IdleLock`, `LocalWipe`.
+- `Security/`: `UserPresence`, PIN policy and store, `IdleLock`, `LocalWipe`.
+- `../Shared/` (compiled into the app and the extension): `Keychain` + `KeychainCodable`, `PushKeyStore`,
+  `PushCrypto` (`PushKeys`, RFC 8291 `WebPush.decrypt`, `PushPayload`).
+- `../KyAuthPush/`: the notification service extension (`org.kysecurity.authenticator.push`).
 - `UI/`: SwiftUI screens.
 - `PrivacyInfo.xcprivacy`: the App Store privacy manifest.
 
@@ -26,6 +29,16 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   `kyidentity-push-v2` (MFA answers), `kyidentity-push-token-v2` with transport `fcm` (the relay
   transport, which also carries APNs; KyIdentity master since PR #87), RFC 7523 device assertions (raw
   `r||s`). Registration always sends `platform: "ios"`; an omitted platform is stored as Android.
+- Sealed pushes: every pairing makes a software P-256 key and 16-byte auth secret (`PushKeys`), stored
+  before registration as one `AfterFirstUnlockThisDeviceOnly` item in access group
+  `group.org.kysecurity.authenticator.push` (the only group the extension holds), and sends them as
+  `pushP256dh`/`pushAuth` (base64url, no padding). KyIdentity then sends only `type` and `kyauth`, the
+  RFC 8291 `aes128gcm` body of the challenge JSON. A refresh re-sends the keys: one without them clears
+  them on the server. A pairing with keys refuses plaintext pushes; only a pairing made before keys
+  existed reads plaintext. Unpair, re-pair and erase delete the keys. Vectors: `PushCryptoTests`.
+- The extension rebuilds every alert from fixed text ("Sign-in request" or "Confirm a sensitive action",
+  "Open KyAuth to review."), never payload text or the username. It opens the payload only to choose
+  the title; the app opens it again in `handlePush`, so nothing the extension writes is trusted.
 - App Attest grading: `docs/specs/2026-10-11-ios-app-attest.md`. Sign-on handoff:
   `docs/specs/2026-10-11-ios-signon-handoff.md`. Change either only together with its counterpart
   (KyIdentity-server, KyPost-for-Mac).
@@ -104,8 +117,11 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project KyA
 ```
 
 Not verifiable in the simulator: APNs delivery, Secure Enclave signing, App Attest, Face ID prompts,
-the camera scanner, the sign-on round trip with KyPost. Installed on an iPhone, and APNs delivery
-through the real relay observed there (2026-10-13).
+the camera scanner, the sign-on round trip with KyPost, the notification service extension and its
+shared Keychain group. Installed on an iPhone, and plaintext APNs delivery through the real relay
+observed there (2026-10-13); encrypted pushes and the extension are not yet observed on hardware.
+
+Without Xcode, `scripts/check-push-crypto-linux.sh` (Docker) runs `PushCryptoTests` against swift-crypto.
 
 App Store screenshots: `scripts/capture-screenshots.sh [iphone|ipad|duo|all]` drives the demo
 through `KyAuthUITests/ScreenshotTests` (skipped unless `KYAUTH_SCREENSHOTS=1`) into
