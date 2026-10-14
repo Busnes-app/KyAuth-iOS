@@ -94,7 +94,8 @@ enum MfaPushParser {
         return MfaChallenge(
             challengeId: challengeId,
             serverUrl: paired.serverUrl.trimmingCharacters(in: .whitespacesAndNewlines),
-            username: value("username", "user"),
+            // KyIdentity's push names no user; the paired account is the one it is for.
+            username: value("username", "user") ?? paired.username?.trimmedNonBlank,
             purpose: purpose,
             expiresAtEpochMs: expiresAt
         )

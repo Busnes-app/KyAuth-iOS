@@ -3,24 +3,25 @@ import UIKit
 
 /// Pairs this phone with KyIdentity from its 90-second QR code, a pasted pairing link, or the server
 /// address, user ID and PIN shown beside the QR code. A code scanned in the Codes tab arrives as
-/// `scanned` and waits for a tap, since pairing replaces the device key.
+/// `scanned` and waits for a tap, since pairing replaces the device key. What the form holds lives in
+/// `AppModel.pairingDraft`, so a lock (leaving KyAuth to copy a link) brings the form back after unlock.
 struct PairingView: View {
     var scanned: QrPairing?
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
 
     @State private var scanning = false
-    @State private var serverUrl = ""
-    @State private var userId = ""
-    @State private var pinCode = ""
-    @State private var deviceName = UIDevice.current.name
     @State private var working = false
     @State private var error: String?
+
+    private var draft: Binding<PairingDraft> {
+        Binding(get: { model.pairingDraft ?? PairingDraft(scanned: scanned) }, set: { model.pairingDraft = $0 })
+    }
 
     var body: some View {
         NavigationStack {
             BusnesForm {
-                if let scanned {
+                if let scanned = draft.wrappedValue.scanned {
                     Section {
                         Button("Pair with \(URL(string: scanned.serverUrl)?.host() ?? scanned.serverUrl)") { run(scanned) }
                     } footer: {
@@ -30,7 +31,7 @@ struct PairingView: View {
                     entryOptions
                 }
                 Section {
-                    TextField("Device name", text: $deviceName)
+                    TextField("Device name", text: draft.deviceName)
                 } footer: {
                     Text("Shown on the KyIdentity devices page.")
                 }
@@ -65,6 +66,10 @@ struct PairingView: View {
             }
         }
         .interactiveDismissDisabled(working)
+        .onAppear {
+            if model.pairingDraft == nil { model.pairingDraft = PairingDraft(scanned: scanned) }
+        }
+        .onDisappear { model.pairingFormClosed() }
     }
 
     @ViewBuilder
@@ -76,17 +81,17 @@ struct PairingView: View {
             Text("Open the KyIdentity devices page and add a device. The code is valid for 90 seconds.")
         }
         Section("Or Enter the Details") {
-            TextField("Server (https://…)", text: $serverUrl)
+            TextField("Server (https://…)", text: draft.serverUrl)
                 .keyboardType(.URL)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-            TextField("User ID", text: $userId)
+            TextField("User ID", text: draft.userId)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-            TextField("Pairing PIN", text: $pinCode)
+            TextField("Pairing PIN", text: draft.pinCode)
                 .keyboardType(.numberPad)
             Button("Pair") { pairManually() }
-                .disabled(serverUrl.isBlank || userId.isBlank || pinCode.isBlank)
+                .disabled(draft.wrappedValue.serverUrl.isBlank || draft.wrappedValue.userId.isBlank || draft.wrappedValue.pinCode.isBlank)
         }
     }
 
@@ -99,11 +104,12 @@ struct PairingView: View {
     }
 
     private func pairManually() {
+        let typed = draft.wrappedValue
         do {
             let pairing = try QrPairing(
-                serverUrl: try PairingEndpoint.validateServerUrl(serverUrl),
-                pinCode: pinCode.trimmedNonBlank,
-                userId: userId.trimmedNonBlank
+                serverUrl: try PairingEndpoint.validateServerUrl(typed.serverUrl),
+                pinCode: typed.pinCode.trimmedNonBlank,
+                userId: typed.userId.trimmedNonBlank
             )
             run(pairing)
         } catch {
@@ -125,7 +131,7 @@ struct PairingView: View {
         Task {
             defer { working = false }
             do {
-                try await model.pair(pairing, deviceName: deviceName.trimmedNonBlank ?? "iPhone")
+                try await model.pair(pairing, deviceName: draft.wrappedValue.deviceName.trimmedNonBlank ?? "iPhone")
                 model.notice = "Paired with KyIdentity"
                 dismiss()
             } catch {

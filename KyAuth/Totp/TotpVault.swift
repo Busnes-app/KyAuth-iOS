@@ -18,27 +18,26 @@ enum VaultError: LocalizedError {
 /// Face ID, Touch ID or passcode check releases, and that iOS destroys if the passcode is removed.
 /// The file is excluded from backup and never exported or synced: losing the phone loses its entries.
 struct TotpVault {
-    private static let keyAccount = "totp-vault-key"
     private static let aad = Data("kyauth-totp-vault-v1".utf8)
 
     let file: URL
+    /// The Keychain account of the vault key; tests use their own.
+    var keyAccount = "totp-vault-key"
 
     static let standard = TotpVault(file: URL.applicationSupportDirectory.appendingPathComponent("totp_vault.bin"))
 
-    /// Creates the key on first use. Writing a protected item needs no prompt.
-    static func ensureKey() throws {
+    /// Creates the key on first use. Writing a protected item needs no prompt. A vault file without a
+    /// key means the key is gone (the passcode was removed): a new key could never open that file.
+    func ensureKey() throws {
         guard !Keychain.exists(keyAccount) else { return }
+        guard !exists else { throw VaultError.keyMissing }
         try Keychain.setProtected(SymmetricKey(size: .bits256).withUnsafeBytes { Data($0) }, for: keyAccount)
     }
 
     /// The key, released by an evaluated user-presence context.
-    static func key(context: LAContext) throws -> SymmetricKey {
+    func key(context: LAContext) throws -> SymmetricKey {
         guard let data = try Keychain.get(keyAccount, context: context) else { throw VaultError.keyMissing }
         return SymmetricKey(data: data)
-    }
-
-    static func deleteKey() {
-        Keychain.delete(keyAccount)
     }
 
     /// False until the first save: nothing to unlock yet.

@@ -1,12 +1,18 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @Environment(AppModel.self) private var model
+
     var body: some View {
         TabView {
             VaultView()
                 .tabItem { Label("Codes", systemImage: "lock.shield") }
             SettingsView()
                 .tabItem { Label("Settings", systemImage: "gearshape") }
+        }
+        // A pairing form that was open when KyAuth locked comes back once it is unlocked.
+        .sheet(isPresented: Binding(get: { model.resumePairing }, set: { if !$0 { model.pairingFormClosed() } })) {
+            PairingView()
         }
     }
 }
@@ -61,6 +67,9 @@ struct VaultView: View {
                     } actions: {
                         Button("Scan QR Code") { sheet = .scan }
                             .busnesProminentButton()
+                        if !model.isPaired && !model.isDemo {
+                            Button("Explore the Demo") { model.startDemo() }
+                        }
                     }
                 }
             }

@@ -73,6 +73,15 @@ struct MfaPushParserTests {
         #expect(challenge.purposeText == "Sign in")
     }
 
+    /// KyIdentity's push names no user, so the card names the paired account; a payload name wins.
+    @Test func namesThePairedAccount() throws {
+        var named = paired
+        named.username = "alice"
+        #expect(try MfaPushParser.parse(push(), paired: named, now: now).username == "alice")
+        #expect(try MfaPushParser.parse(push(["username": "bob"]), paired: named, now: now).username == "bob")
+        #expect(try MfaPushParser.parse(push(), paired: paired, now: now).username == nil)
+    }
+
     @Test func refusesForeignDeviceAccountPurposeAndExpiry() {
         for bad in [
             push(["deviceId": "d-2"]), push(["deviceUserId": "u-2"]), push(removing: ["deviceUserId"]),

@@ -117,6 +117,18 @@ struct TotpVaultTests {
         #expect(try file.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
         vault.delete()
     }
+
+    @Test func aVaultWithoutItsKeyIsNeverGivenANewOne() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var vault = TotpVault(file: directory.appendingPathComponent("v.bin"))
+        vault.keyAccount = "test-\(UUID().uuidString)"
+        try Data([1, 2, 3]).write(to: vault.file)
+
+        #expect(throws: VaultError.keyMissing) { try vault.ensureKey() }
+        #expect(!Keychain.exists(vault.keyAccount))
+    }
 }
 
 @MainActor
@@ -135,18 +147,32 @@ struct PinTests {
     @Test func failureLadderWipesOnTheFifth() {
         var state = PinFailureState()
         let delays: [Int64] = [0, 5, 30, 300]
-        var now: Int64 = 1000
+        var now: TimeInterval = 1000
         for (index, delay) in delays.enumerated() {
             #expect(PinFailurePolicy.mayTry(state, now: now))
             state = PinFailurePolicy.registerFailure(state, now: now)
             #expect(PinFailurePolicy.secondsUntilRetry(state, now: now) == delay)
             #expect(PinFailurePolicy.attemptsRemaining(state) == 4 - index)
             #expect(!PinFailurePolicy.mustWipe(state))
-            now += delay
+            now += TimeInterval(delay)
         }
         state = PinFailurePolicy.registerFailure(state, now: now)
         #expect(PinFailurePolicy.mustWipe(state))
         #expect(!PinFailurePolicy.mayTry(state, now: now + 10_000))
+    }
+
+    @Test func aRestartNeverShortensTheDelay() {
+        // Fourth failure at uptime 50,000 s: 300 s to wait.
+        var state = PinFailureState()
+        for _ in 0..<4 { state = PinFailurePolicy.registerFailure(state, now: 50_000) }
+        #expect(PinFailurePolicy.normalized(state, now: 50_100) == state)
+
+        // After a restart uptime is near zero: the whole delay starts again, not 50,000 s.
+        let restarted = PinFailurePolicy.normalized(state, now: 20)
+        #expect(restarted.failedAttempts == 4)
+        #expect(PinFailurePolicy.secondsUntilRetry(restarted, now: 20) == 300)
+        #expect(!PinFailurePolicy.mayTry(restarted, now: 319))
+        #expect(PinFailurePolicy.mayTry(restarted, now: 320))
     }
 
     @Test func derivationIsSaltedAndStable() {

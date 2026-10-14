@@ -23,7 +23,7 @@ final class AppModel {
     private(set) var vaultError: String?
     private(set) var account: PairedAccount?
     private(set) var pendingChallenge: MfaChallenge? = MfaChallengeStore.load()
-    private(set) var pushState = PushStore.load()
+    private(set) var pushState: PushState
     private(set) var pinEnabled = PinStore.isEnabled
     private(set) var signOnRequest: SignOnRequest?
     /// A sign-on that could not be read or answered, shown once.
@@ -38,6 +38,13 @@ final class AppModel {
     private var nextDemoPush: TimeInterval = 0
     /// The number the demo's imaginary sign-in screen shows for the pending request.
     private(set) var demoBrowserDigits: String?
+    /// Why Apple Push last refused to register KyAuth, until it next tries again.
+    private(set) var pushRegistrationError: String?
+    /// The open pairing form. It outlives a lock, in memory only: pairing is not vault data, and
+    /// pairing by link or by hand usually means leaving KyAuth, which locks it.
+    var pairingDraft: PairingDraft?
+    /// Set by `lock` when a pairing form was open, so the unlocked app shows it again.
+    var resumePairing = false
 
     var idleMinutes: Int {
         didSet { UserDefaults.standard.set(idleMinutes, forKey: "idle-minutes") }
@@ -61,8 +68,13 @@ final class AppModel {
     /// The App Group exchange; tests point it at a temporary directory.
     private let makeHandoff: () -> SignOnHandoff?
 
-    init(account: PairedAccount? = PairingStore.account(), makeHandoff: @escaping () -> SignOnHandoff? = { SignOnHandoff() }) {
+    init(
+        account: PairedAccount? = PairingStore.account(),
+        pushState: PushState = PushStore.load(),
+        makeHandoff: @escaping () -> SignOnHandoff? = { SignOnHandoff() }
+    ) {
         self.account = account
+        self.pushState = pushState
         self.makeHandoff = makeHandoff
         idleMinutes = IdleLock.validatedMinutes(UserDefaults.standard.integer(forKey: "idle-minutes"))
         appearance = Appearance(stored: UserDefaults.standard.string(forKey: Appearance.defaultsKey))
@@ -77,8 +89,20 @@ final class AppModel {
         do {
             let context = try await UserPresence.evaluate(reason: "Unlock your KyAuth codes")
             guard generation == lockGeneration else { return context.invalidate() }
-            try TotpVault.ensureKey()
-            let key = try TotpVault.key(context: context)
+            // A missing vault key still unlocks, with saving disabled and the error shown, so Settings
+            // and Erase All Data stay reachable.
+            let key: SymmetricKey?
+            do {
+                try TotpVault.standard.ensureKey()
+                key = try TotpVault.standard.key(context: context)
+            } catch VaultError.keyMissing {
+                key = nil
+            }
+            if pinEnabled && !PinStore.hasVerifier {
+                // Gone with the passcode, like the vault and device keys: no PIN could match it, and
+                // counting each try as a failure would erase the phone for a correct PIN.
+                removePin()
+            }
             if pinEnabled {
                 pinContext = context
                 vaultKey = key
@@ -95,9 +119,11 @@ final class AppModel {
     }
 
     func submitPin(_ pin: String) -> String? {
-        guard lockState == .needsPin, let context = pinContext, let key = vaultKey else { return nil }
-        let now = Int64(Date().timeIntervalSince1970)
-        let state = PinStore.failures
+        guard lockState == .needsPin, let context = pinContext else { return nil }
+        let now = ProcessInfo.processInfo.systemUptime
+        let stored = PinStore.failures
+        let state = PinFailurePolicy.normalized(stored, now: now)
+        if state != stored { PinStore.saveFailures(state) }
         guard PinFailurePolicy.mayTry(state, now: now) else {
             return "Try again in \(PinFailurePolicy.secondsUntilRetry(state, now: now)) seconds."
         }
@@ -105,7 +131,7 @@ final class AppModel {
             PinStore.resetFailures()
             context.invalidate()
             pinContext = nil
-            finishUnlock(key: key)
+            finishUnlock(key: vaultKey)
             return nil
         }
         let failed = PinFailurePolicy.registerFailure(state, now: now)
@@ -121,8 +147,10 @@ final class AppModel {
         return message
     }
 
-    private func finishUnlock(key: SymmetricKey) {
+    /// A nil key means the vault key is gone: no codes, saving disabled, the reason shown.
+    private func finishUnlock(key: SymmetricKey?) {
         do {
+            guard let key else { throw VaultError.keyMissing }
             entries = try TotpVault.standard.load(key: key)
             vaultError = nil
         } catch {
@@ -143,6 +171,7 @@ final class AppModel {
             pendingChallenge = MfaChallengeStore.load()
         }
         lockGeneration += 1
+        resumePairing = pairingDraft != nil
         pinContext?.invalidate()
         pinContext = nil
         vaultKey = nil
@@ -217,10 +246,7 @@ final class AppModel {
     /// unpaired: its old key is already gone.
     func pair(_ pairing: QrPairing, deviceName: String) async throws {
         if isDemo { lock() }
-        guard let pushToken = pushState.latestToken else {
-            UIApplication.shared.registerForRemoteNotifications()
-            throw PairingError.invalid("KyAuth is still registering with Apple Push. Wait a moment, then try again.")
-        }
+        let pushToken = try await pushTokenForPairing()
         guard UserPresence.deviceHasPasscode else { throw UserPresenceError.noPasscode }
         // The old pairing goes first: once its key is replaced it can answer nothing, so any
         // failure from here on must leave the phone unpaired.
@@ -240,11 +266,39 @@ final class AppModel {
             PushStore.update { $0.registeredToken = pushToken }
             pushState = PushStore.load()
             account = paired
+            pairingDraft = nil
+            resumePairing = false
             _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
         } catch {
             DeviceSigningKey.delete()
             throw error
         }
+    }
+
+    static let pushTokenTimeout: Duration = .seconds(15)
+
+    /// The APNs token KyIdentity will push to. Without one yet, asks Apple Push again and waits up to
+    /// `timeout`; a refusal from Apple Push ends the wait with its reason.
+    func pushTokenForPairing(timeout: Duration = pushTokenTimeout) async throws -> String {
+        if let token = pushState.latestToken { return token }
+        pushRegistrationError = nil
+        UIApplication.shared.registerForRemoteNotifications()
+        let deadline = ContinuousClock.now + timeout
+        while ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(200))
+            if let token = pushState.latestToken { return token }
+            if let reason = pushRegistrationError {
+                throw PairingError.invalid("Apple Push is unavailable: \(reason)")
+            }
+        }
+        throw PairingError.invalid("Apple Push did not answer. Check the connection, then try again.")
+    }
+
+    /// The pairing form closed. A lock is not a close: the form comes back after unlocking.
+    func pairingFormClosed() {
+        guard lockState != .locked else { return }
+        pairingDraft = nil
+        resumePairing = false
     }
 
     /// Forgets the pairing on this phone. KyIdentity keeps the device until it is removed there.
@@ -269,6 +323,12 @@ final class AppModel {
         let hex = PushStore.hex(token)
         PushStore.update { $0.latestToken = hex }
         pushState = PushStore.load()
+        pushRegistrationError = nil
+    }
+
+    func didFailToRegisterForPush(_ error: Error) {
+        pushRegistrationError = error.localizedDescription
+        notice = "Apple Push is unavailable: \(error.localizedDescription)"
     }
 
     /// Re-points KyIdentity at the current APNs token, signed by the device key (one prompt).
@@ -369,6 +429,8 @@ final class AppModel {
     func startDemo() {
         guard !isPaired, signOnRequest == nil else { return }
         lock()
+        pairingDraft = nil
+        resumePairing = false
         isDemo = true
         entries = DemoMode.entries()
         pendingChallenge = nil
@@ -515,6 +577,8 @@ final class AppModel {
     func eraseAllData() {
         lock()
         LocalWipe.eraseAll()
+        pairingDraft = nil
+        resumePairing = false
         account = nil
         pendingChallenge = nil
         pushState = PushState()
@@ -532,4 +596,13 @@ final class AppModel {
         defer { context.invalidate() }
         return try DeviceSigningKey.sign(message, context: context)
     }
+}
+
+/// What the pairing form holds: a code scanned in the Codes tab, or what was typed. Never saved.
+struct PairingDraft: Equatable {
+    var scanned: QrPairing?
+    var serverUrl = ""
+    var userId = ""
+    var pinCode = ""
+    var deviceName = UIDevice.current.name
 }

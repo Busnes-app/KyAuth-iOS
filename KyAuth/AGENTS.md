@@ -31,8 +31,10 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   (KyIdentity-server, KyPost-for-Mac).
 - Release builds require HTTPS; debug builds also accept loopback HTTP.
 - `PrivacyInfo.xcprivacy` declares every required-reason API the app uses (now `UserDefaults`
-  CA92.1, `systemUptime` 35F9.1, file timestamps C617.1), no tracking and no collected data.
-  Adding a use from another category, or for another reason, updates it in the same change.
+  CA92.1, `systemUptime` 35F9.1, file timestamps C617.1) and no tracking. Collected data: Device ID
+  and User ID, app functionality, linked to the user (they are part of signing in), because the
+  developer-run APNs relay receives the push token and KyIdentity's IDs. Adding a use from another category, or for another reason,
+  updates it in the same change, together with `Distribution/AppStore/app-privacy.md`.
 - Device key: Secure Enclave P-256, `.privateKeyUsage` + `.userPresence`, replaced at every pairing
   (a failed re-pair leaves the phone unpaired). A software key exists only in the simulator.
 - Every signature and every vault unlock takes exactly one Face ID / passcode check; the evaluated
@@ -44,8 +46,13 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 - Keychain items are this-device-only and never synced; a fresh install erases leftovers.
 - Only an absent vault file loads as empty; an empty or unreadable file is an error and saving
   stays disabled, so a write can never replace entries that failed to load.
+- A vault file whose key is gone (the passcode was removed) is never given a new key: it unlocks
+  with no codes, saving disabled and the reason shown, so Erase All Data stays reachable.
 - The Codes tab scanner (`ScannedCode`) adds `otpauth://` accounts and hands a KyIdentity pairing
   code to `PairingView(scanned:)`, which pairs only after a tap (pairing replaces the device key).
+- The pairing form's contents (`AppModel.pairingDraft`, memory only) survive a lock, and the form
+  reopens after unlock: pairing by link or by hand means leaving KyAuth. Pairing waits up to 15 s
+  for an APNs token and fails with Apple Push's reason when it refuses.
 - `otpauth://` defaults apply only to omitted parameters; an unsupported algorithm or a malformed
   or valueless `digits`/`period`/`algorithm` is refused.
 - Secrets are typed only into secure fields (setup key, PINs), and third-party keyboards are
@@ -57,12 +64,16 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 - Locking: immediate on background; foreground idle lock 1/5/15/30/60 minutes (default 5) on system
   uptime. Locking clears codes, the key and a copied code; the app switcher and screen capture show
   a cover. Copied codes are local-only and expire at the end of their period.
-- Optional PIN after Face ID: delays 0/5/30/300 s, the fifth failure erases all local data.
+- Optional PIN after Face ID: delays 0/5/30/300 s on system uptime (a restart restarts the delay,
+  never shortens it), the fifth failure erases all local data. A PIN whose verifier is gone with
+  the passcode is turned off at unlock, not counted as failures.
 - Push MFA: a push must name this device and account, carry `purpose` and an expiry at most 10
-  minutes ahead; a payload `serverUrl` is ignored. Approve needs the two digits typed from the
+  minutes ahead; a payload `serverUrl` is ignored. KyIdentity's push names no user, so the card
+  shows the paired account's username. Approve needs the two digits typed from the
   browser: the phone never holds the answer, so match or decoy numbers in a payload are dropped
   and no choice of numbers is ever offered. A 2xx answer without a decision is an error.
-- Demo mode ("Try Demo" on the lock screen, unpaired phones only) is for App Store review: fixed
+- Demo mode ("Try Demo" on the lock screen, or "Explore the Demo" on an empty Codes tab; unpaired
+  phones only) is for App Store review: fixed
   codes and a simulated request every 15 s with `.invalid` server, held in memory. With no browser,
   the card names the number to type as demo text, kept in `AppModel` and never in the request. It needs no Face
   ID, reads and writes no vault, Keychain, pairing or network; Settings hides PIN, auto-lock, pairing
@@ -92,8 +103,9 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project KyA
   -scheme KyAuth -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' CODE_SIGNING_ALLOWED=NO test
 ```
 
-Not verifiable in the simulator, and not yet observed on hardware: APNs delivery, Secure Enclave
-signing, App Attest, Face ID prompts, the camera scanner, the sign-on round trip with KyPost.
+Not verifiable in the simulator: APNs delivery, Secure Enclave signing, App Attest, Face ID prompts,
+the camera scanner, the sign-on round trip with KyPost. Installed on an iPhone, and APNs delivery
+through the real relay observed there (2026-10-13).
 
 App Store screenshots: `scripts/capture-screenshots.sh [iphone|ipad|duo|all]` drives the demo
 through `KyAuthUITests/ScreenshotTests` (skipped unless `KYAUTH_SCREENSHOTS=1`) into
@@ -102,7 +114,9 @@ The Duo needs the iOS 27.1 simulator runtime and boots folded; its inner display
 after unfolding it by hand in DeviceHub. `swift scripts/render-header.swift` then draws the App Store
 product page header (3840 x 1646) and search artwork (3840 x 2560) into `Distribution/Promo/` from
 those screenshots. Listing text, one file per App Store Connect field, is in
-`Distribution/AppStore/en-US/`; keep its claims true to the app.
+`Distribution/AppStore/en-US/` (including the privacy policy and support URLs); keep its claims true
+to the app. App Review notes are `Distribution/AppStore/review_notes.txt`, the App Privacy answers
+`Distribution/AppStore/app-privacy.md`.
 
 ## Child DOX Index
 

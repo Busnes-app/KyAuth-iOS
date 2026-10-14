@@ -22,7 +22,7 @@ struct LockView: View {
                     Button {
                         Task { await model.unlock() }
                     } label: {
-                        Label("Unlock with \(UserPresence.biometryName)", systemImage: "faceid")
+                        Label("Unlock with \(UserPresence.biometryName)", systemImage: UserPresence.biometrySymbol)
                             .frame(maxWidth: .infinity)
                     }
                     .busnesProminentButton()
