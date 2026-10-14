@@ -4,8 +4,10 @@
 # CryptoKit's API on Linux). It proves the RFC 8291 code, not CryptoKit itself or anything on a device.
 set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
-work="${TMPDIR:-/tmp}/kyauth-push-crypto-check"
-rm -rf "$work/Sources" "$work/Tests"
+# A fresh private directory each run: a fixed path in a shared temp directory could be planted by
+# another user, and the writes below would follow its symlinks.
+work="$(mktemp -d "${TMPDIR:-/tmp}/kyauth-push-crypto-check.XXXXXX")"
+trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/Sources/KyAuth" "$work/Tests/KyAuthTests"
 sed 's/^import CryptoKit$/import Crypto/' "$repo/Shared/PushCrypto.swift" > "$work/Sources/KyAuth/PushCrypto.swift"
 cp "$repo/KyAuth/Mfa/MfaChallenge.swift" "$work/Sources/KyAuth/"
@@ -41,4 +43,6 @@ let package = Package(
     ]
 )
 SWIFT
-docker run --rm --memory=6g -v "$work:/work" -w /work swift:6.1 swift test 2>&1
+# As this user, so the build output it leaves in $work is ours to delete.
+docker run --rm --memory=6g --user "$(id -u):$(id -g)" -e HOME=/work/.home \
+    -v "$work:/work" -w /work swift:6.1 swift test 2>&1
