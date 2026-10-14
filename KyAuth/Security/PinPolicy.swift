@@ -39,6 +39,19 @@ struct PinFailureState: Codable, Equatable {
     var retryAfterUptime: TimeInterval = 0
 }
 
+extension PinFailureState {
+    /// Records from before the uptime change carry `retryAfterEpochSeconds` instead. Their failure
+    /// count must survive, or an update would hand back the attempts the wipe ladder took away. The
+    /// missing deadline decodes as far in the future, which `PinFailurePolicy.normalized` turns into
+    /// the full delay for that count, starting now.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        failedAttempts = try container.decode(Int.self, forKey: .failedAttempts)
+        retryAfterUptime = try container.decodeIfPresent(TimeInterval.self, forKey: .retryAfterUptime)
+            ?? .greatestFiniteMagnitude
+    }
+}
+
 /// Delays of 0, 5, 30 and 300 seconds after failures one to four; the fifth failure wipes.
 /// Every `now` is system uptime, so setting the clock forward skips no delay.
 enum PinFailurePolicy {

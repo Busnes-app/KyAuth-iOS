@@ -161,6 +161,19 @@ struct PinTests {
         #expect(!PinFailurePolicy.mayTry(state, now: now + 10_000))
     }
 
+    /// A record saved before the uptime change keeps its count, and its delay starts again in full.
+    @Test func anOlderFailureRecordKeepsItsCount() throws {
+        let legacy = Data(#"{"failedAttempts":4,"retryAfterEpochSeconds":1760000000}"#.utf8)
+        let state = PinFailurePolicy.normalized(try JSONDecoder().decode(PinFailureState.self, from: legacy), now: 100)
+        #expect(state.failedAttempts == 4)
+        #expect(!PinFailurePolicy.mayTry(state, now: 100))
+        #expect(PinFailurePolicy.secondsUntilRetry(state, now: 100) == 300)
+        #expect(PinFailurePolicy.mustWipe(PinFailurePolicy.registerFailure(state, now: 400)))
+
+        // The migrated state is saved again, so it must encode and read back unchanged.
+        #expect(try JSONDecoder().decode(PinFailureState.self, from: JSONEncoder().encode(state)) == state)
+    }
+
     @Test func aRestartNeverShortensTheDelay() {
         // Fourth failure at uptime 50,000 s: 300 s to wait.
         var state = PinFailureState()
