@@ -46,7 +46,8 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 - `PrivacyInfo.xcprivacy` declares every required-reason API the app uses (now `UserDefaults`
   CA92.1, `systemUptime` 35F9.1, file timestamps C617.1) and no tracking. Collected data: Device ID
   and User ID, app functionality, linked to the user (they are part of signing in), because the
-  developer-run APNs relay receives the push token and KyIdentity's IDs. Adding a use from another category, or for another reason,
+  developer-run APNs relay receives the push token (and keeps its hash) and, for a pairing without
+  push keys only, KyIdentity's IDs in plaintext; sealed pushes carry none. Adding a use from another category, or for another reason,
   updates it in the same change, together with `Distribution/AppStore/app-privacy.md`.
 - Device key: Secure Enclave P-256, `.privateKeyUsage` + `.userPresence`, replaced at every pairing
   (a failed re-pair leaves the phone unpaired). A software key exists only in the simulator.

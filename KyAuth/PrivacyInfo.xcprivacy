@@ -11,9 +11,10 @@
 	<!-- KyAuth talks only to the KyIdentity server the user paired it with, which the user's
 	     organization runs. That server sends sign-in requests through the APNs relay Worker the
 	     developer runs (KyIdentity-server workers/apns), which receives this phone's APNs token
-	     (Device ID) and KyIdentity's user and device IDs (User ID), and keeps tokens beyond the
-	     single send. Both serve app functionality only and are linked to the user, since they
-	     are part of signing in. No tracking, analytics or crash reporter. Change this
+	     on every push and keeps its SHA-256 hash beyond the send (Device ID). Pushes to a pairing
+	     with push keys are sealed and carry no KyIdentity IDs; a pairing without them gets
+	     KyIdentity's user and device IDs in plaintext (User ID). Both serve app functionality
+	     only and are linked to the user, since they are part of signing in. No tracking, analytics or crash reporter. Change this
 	     together with the App Store Connect privacy label (Distribution/AppStore/app-privacy.md). -->
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>
