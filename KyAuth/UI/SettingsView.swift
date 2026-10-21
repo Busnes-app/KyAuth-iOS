@@ -71,6 +71,7 @@ struct SettingsView: View {
                     LabeledContent("Version", value: Bundle.main.versionString)
                     Link("Source Code", destination: URL(string: "https://github.com/Busnes-app/KyAuth-iOS")!)
                     NavigationLink("License") { LicenseView() }
+                    Link("Privacy Policy", destination: URL(string: "https://busnes.app/privacy.html")!)
                 } header: {
                     Text("About")
                 } footer: {
