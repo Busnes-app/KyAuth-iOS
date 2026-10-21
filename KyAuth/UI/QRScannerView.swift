@@ -1,20 +1,39 @@
+import AVFoundation
 import SwiftUI
 import VisionKit
 
 /// The system camera scanner for QR codes. Every recognised payload is passed on; the caller decides
-/// whether it is one it accepts.
+/// whether it is one it accepts. Camera access is asked for here, on first use: the scanner itself
+/// reports unavailable until it is granted, which would leave KyAuth out of the Camera list in Settings.
 struct QRScannerView: View {
     let onScan: (String) -> Void
+    @State private var access = AVCaptureDevice.authorizationStatus(for: .video)
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
-        if DataScannerViewController.isSupported && DataScannerViewController.isAvailable {
+        if access == .notDetermined {
+            ProgressView()
+                .task {
+                    _ = await AVCaptureDevice.requestAccess(for: .video)
+                    access = AVCaptureDevice.authorizationStatus(for: .video)
+                }
+        } else if access == .authorized && DataScannerViewController.isSupported && DataScannerViewController.isAvailable {
             DataScanner(onScan: onScan)
         } else {
-            ContentUnavailableView(
-                "Camera Unavailable",
-                systemImage: "camera",
-                description: Text("Allow camera access for KyAuth in Settings, or enter the details by hand.")
-            )
+            ContentUnavailableView {
+                Label("Camera Unavailable", systemImage: "camera")
+            } description: {
+                Text(access == .authorized
+                    ? "This device can't scan QR codes. Tap Cancel and enter the details by hand."
+                    : "Allow camera access for KyAuth in Settings, or tap Cancel and enter the details by hand.")
+            } actions: {
+                if access == .denied {
+                    Button("Open Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                    }
+                    .busnesProminentButton()
+                }
+            }
         }
     }
 }
