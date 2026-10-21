@@ -38,7 +38,7 @@ struct SettingsView: View {
                     } header: {
                         Text("Sign-in Requests")
                     } footer: {
-                        Text("KyIdentity sends sign-in requests to this phone through Apple Push.")
+                        Text("KyIdentity sends sign-in requests to this device through Apple Push.")
                     }
                 }
                 if !model.isDemo {
@@ -57,7 +57,7 @@ struct SettingsView: View {
                     } header: {
                         Text("Security")
                     } footer: {
-                        Text("KyAuth locks when you leave it, and after the auto-lock time in the app. A PIN is asked after \(UserPresence.biometryName). Five wrong PINs erase KyAuth's data on this phone.")
+                        Text("KyAuth locks when you leave it, and after the auto-lock time in the app. A PIN is asked after \(UserPresence.biometryName). Five wrong PINs erase KyAuth's data on this device.")
                     }
                 }
                 Section {
@@ -65,7 +65,7 @@ struct SettingsView: View {
                         ForEach(Appearance.allCases) { Text($0.title).tag($0) }
                     }
                 } footer: {
-                    Text("System switches between Busnes Light and Busnes Dark with this iPhone's setting.")
+                    Text("System switches between Busnes Light and Busnes Dark with this device's setting.")
                 }
                 Section {
                     LabeledContent("Version", value: Bundle.main.versionString)
@@ -74,7 +74,7 @@ struct SettingsView: View {
                 } header: {
                     Text("About")
                 } footer: {
-                    Text("Codes are stored only on this phone, encrypted, with no backup or sync. If you lose the phone, use your KyIdentity recovery codes.")
+                    Text("Codes are stored only on this device, encrypted, with no backup or sync. If you lose the device, use your KyIdentity recovery codes.")
                 }
                 if !model.isDemo {
                     Section {
@@ -88,12 +88,12 @@ struct SettingsView: View {
             .confirmationDialog("Unpair from KyIdentity?", isPresented: $confirmUnpair, titleVisibility: .visible) {
                 Button("Unpair", role: .destructive) { model.unpair() }
             } message: {
-                Text("This phone will stop receiving sign-in requests and its device key is deleted. Remove the device on the KyIdentity devices page too.")
+                Text("This device will stop receiving sign-in requests and its device key is deleted. Remove the device on the KyIdentity devices page too.")
             }
             .confirmationDialog("Erase all KyAuth data?", isPresented: $confirmErase, titleVisibility: .visible) {
                 Button("Erase All Data", role: .destructive) { model.eraseAllData() }
             } message: {
-                Text("Every code, the KyIdentity pairing and the PIN are deleted from this phone. This cannot be undone.")
+                Text("Every code, the KyIdentity pairing and the PIN are deleted from this device. This cannot be undone.")
             }
             .task { notificationStatus = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus }
         }
@@ -120,7 +120,7 @@ struct SettingsView: View {
             Text("KyIdentity")
         } footer: {
             if model.account?.canSignOn == false {
-                Text("To let suite apps such as KyPost sign in through this phone, turn on sign-in for this device on the KyIdentity devices page, then pair again.")
+                Text("To let suite apps such as KyPost sign in through this device, turn on sign-in for this device on the KyIdentity devices page, then pair again.")
             }
         }
     }

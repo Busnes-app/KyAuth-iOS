@@ -100,7 +100,7 @@ struct TokenClientTests {
         #expect(TokenResult.success(idToken: "secret").description == "success(redacted)")
         #expect(TokenClient.parse(status: 200, json: ["access_token": "a"]) == .failure("KyIdentity returned no identity token."))
         #expect(TokenClient.parse(status: 400, json: ["error_description": "signon_not_permitted"])
-            == .failure("This account cannot sign in to apps from this phone right now. Use web sign-in."))
+            == .failure("This account cannot sign in to apps from this device right now. Use web sign-in."))
         #expect(TokenClient.parse(status: 400, json: ["error_description": "something_new"]) == .failure("KyIdentity refused the sign-in (400)."))
         if case .failure(let message) = TokenClient.parse(status: 400, json: ["error_description": "device_signon_disabled"]) {
             #expect(message.contains("KyIdentity devices page"))

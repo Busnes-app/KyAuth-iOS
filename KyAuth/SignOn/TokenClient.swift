@@ -47,9 +47,9 @@ struct TokenClient {
         guard (200..<300).contains(status) else {
             switch json["error_description"] as? String {
             case "device_signon_disabled":
-                return .failure("Sign-in from this phone is turned off. Turn it on for this device on the KyIdentity devices page, then try again.")
+                return .failure("Sign-in from this device is turned off. Turn it on for this device on the KyIdentity devices page, then try again.")
             case "signon_not_permitted":
-                return .failure("This account cannot sign in to apps from this phone right now. Use web sign-in.")
+                return .failure("This account cannot sign in to apps from this device right now. Use web sign-in.")
             default:
                 return .failure("KyIdentity refused the sign-in (\(status)).")
             }

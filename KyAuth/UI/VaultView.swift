@@ -138,7 +138,7 @@ struct ReconnectBanner: View {
         VStack(alignment: .leading, spacing: 8) {
             Label("Sign-in requests paused", systemImage: "bell.slash")
                 .font(.headline)
-            Text("Apple gave KyAuth a new push address. Reconnect so KyIdentity can reach this phone.")
+            Text("Apple gave KyAuth a new push address. Reconnect so KyIdentity can reach this device.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             Button("Reconnect") { Task { await model.reconnectPush() } }

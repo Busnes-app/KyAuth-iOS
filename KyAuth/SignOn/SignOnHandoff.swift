@@ -102,7 +102,7 @@ struct SignOnHandoff {
             throw SignOnRefusal.refused("KyAuth is paired with a different KyIdentity server.", consumer)
         }
         guard paired.canSignOn else {
-            throw SignOnRefusal.refused("Sign-in from this phone is turned off. Turn it on for this device on the KyIdentity devices page, then try again.", consumer)
+            throw SignOnRefusal.refused("Sign-in from this device is turned off. Turn it on for this device on the KyIdentity devices page, then try again.", consumer)
         }
         return SignOnRequest(nonce: nonce, consumer: consumer, clientId: clientId, origin: origin, issuer: issuer)
     }
