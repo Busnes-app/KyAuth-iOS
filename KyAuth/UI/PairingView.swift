@@ -131,7 +131,7 @@ struct PairingView: View {
         Task {
             defer { working = false }
             do {
-                try await model.pair(pairing, deviceName: draft.wrappedValue.deviceName.trimmedNonBlank ?? "iPhone")
+                try await model.pair(pairing, deviceName: draft.wrappedValue.deviceName.trimmedNonBlank ?? UIDevice.current.model)
                 model.notice = "Paired with KyIdentity"
                 dismiss()
             } catch {

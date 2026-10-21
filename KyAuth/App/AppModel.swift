@@ -30,6 +30,8 @@ final class AppModel {
     var signOnNotice: String?
     /// Transient user-facing message (a toast).
     var notice: String?
+    /// Set when five wrong PINs erased KyAuth, so the lock screen says why the codes are gone.
+    var erasedAfterPins = false
     /// Bumped on every lock: views close sheets and forms that belong to the unlocked session.
     private(set) var lockGeneration = 0
     var screenCaptured = false
@@ -138,6 +140,7 @@ final class AppModel {
         PinStore.saveFailures(failed)
         if PinFailurePolicy.mustWipe(failed) {
             eraseAllData()
+            erasedAfterPins = true
             return nil
         }
         let remaining = PinFailurePolicy.attemptsRemaining(failed)
@@ -280,7 +283,7 @@ final class AppModel {
         }
     }
 
-    static let pushTokenTimeout: Duration = .seconds(15)
+    nonisolated static let pushTokenTimeout: Duration = .seconds(15)
 
     /// The APNs token KyIdentity will push to. Without one yet, asks Apple Push again and waits up to
     /// `timeout`; a refusal from Apple Push ends the wait with its reason.
