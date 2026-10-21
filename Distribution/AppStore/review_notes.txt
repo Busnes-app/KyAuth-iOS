@@ -1,1 +1,30 @@
-Use Try Demo to see all functionality
+KyAuth is the authenticator app for KyIdentity, a sign-in server that each organization installs and runs for itself. There is no shared KyAuth service and no KyAuth account, so we cannot give you a username and password. Instead, the app has a built-in demo of the sign-in request flow that runs without a server.
+
+SIGN-IN CODES (NO SERVER NEEDED)
+1. On the lock screen, tap "Unlock with Face ID" (the device needs a passcode).
+2. Tap + > Enter Setup Key. Enter any Name and this Setup key: KYAUTHREVIEWTEST. Tap Save.
+3. A 6-digit code appears and changes every 30 seconds. You can copy, search, edit and delete codes.
+Any service's two-factor setup QR code works the same way.
+
+HOW TO OPEN THE DEMO
+1. Install the app fresh. Don't pair it with anything.
+2. On the lock screen, tap "Try Demo" (under "Unlock with Face ID"). While the Codes screen is empty, "Explore the Demo" opens it too.
+   The demo is offered only on a device that isn't paired with KyIdentity. It needs no Face ID and no passcode.
+3. Three example codes appear: Example Mail, Example Cloud and Example Bank. You can copy, search, edit, delete and add codes. Nothing is saved.
+
+PRACTICE A SIGN-IN REQUEST
+- About 3 seconds after the demo opens, a sign-in request card appears for demo@example.com.
+- In real use, the number to type is shown in the user's web browser. The demo has no browser, so the card says it: "Demo: the sign-in screen shows NN."
+- Type that number and tap Approve to see "Sign-in approved". A different number shows "Sign-in denied: the number did not match". Deny shows "Sign-in denied".
+- A request expires after 60 seconds. The card then says "This request expired."; tap Dismiss.
+- The next request arrives 15 seconds after each one is answered or dismissed.
+
+GOOD TO KNOW
+- The demo ends whenever the app locks: when you leave the app, after the auto-lock time, or when you tap Lock or Settings > Exit Demo. Tap Try Demo again to go back in.
+- In the demo, Settings hides the PIN, auto-lock, pairing and erase options. They are available outside the demo.
+- If you set a PIN outside the demo, note that five wrong PINs erase all of KyAuth's data on the device, by design.
+- Pairing with KyIdentity (Settings > Pair with KyIdentity, or scanning a pairing QR code) and signing in to other apps from the same developer need an organization's KyIdentity server, so they can't be completed during review. The demo shows the sign-in request they lead to.
+- Notifications: KyAuth asks for notification permission only after it is paired, because sign-in requests arrive as push notifications. The demo shows requests inside the app instead, so you won't see a notification prompt or banner.
+- KyAuth has no accounts, ads, analytics or tracking. Codes stay encrypted on the device and are never backed up or synced.
+
+Contact: privacy@busnes.app
