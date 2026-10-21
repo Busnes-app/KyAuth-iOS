@@ -59,7 +59,8 @@ struct VaultView: View {
                 }
             }
             .overlay {
-                if model.entries.isEmpty && model.vaultError == nil {
+                // Only over an empty list: drawn over a request card or the reconnect banner, it covers their buttons.
+                if model.entries.isEmpty && model.vaultError == nil && model.pendingChallenge == nil && !model.needsPushRefresh {
                     ContentUnavailableView {
                         Label("No Codes Yet", systemImage: "key.viewfinder")
                     } description: {
