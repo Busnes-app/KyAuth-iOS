@@ -41,6 +41,11 @@ struct RootView: View {
         ) { _ in
             Button("OK", role: .cancel) {}
         } message: { Text($0) }
+        .alert("KyAuth Was Erased", isPresented: $model.erasedAfterPins) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("A wrong PIN was entered five times, so KyAuth erased its codes, pairing and PIN on this device.")
+        }
         .overlay(alignment: .bottom) { Toast(message: $model.notice) }
     }
 }
