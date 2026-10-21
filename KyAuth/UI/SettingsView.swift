@@ -155,9 +155,9 @@ struct LicenseView: View {
 
 extension Bundle {
     var versionString: String {
+        // The App Store version field allows only digits and dots, so the "v" is added here.
         let version = object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
-        let build = object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
-        return "\(version) (\(build))"
+        return "v\(version)"
     }
 }
 
