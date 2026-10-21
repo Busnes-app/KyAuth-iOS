@@ -32,6 +32,9 @@ struct LockView: View {
                     }
                 }
                 .padding(.horizontal, 24)
+                // Phone-width on iPad, so the buttons don't stretch across a landscape screen.
+                .frame(maxWidth: 520)
+                .frame(maxWidth: .infinity)
             }
             .background(Color.busnesBackground)
             .navigationBarTitleDisplayMode(.inline)
