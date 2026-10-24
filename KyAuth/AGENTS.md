@@ -94,6 +94,9 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   and erase. Any lock (background, idle, Lock, Exit Demo) ends it.
 - The lock screen prompts for Face ID on its own only when paired or a vault file exists; a fresh
   install waits for a tap, so Try Demo is reachable without a passcode prompt.
+- `docs/ASSURANCE-CASE.md` argues that these contracts meet KyAuth's security requirements, with
+  file paths as evidence. A change that moves a trust boundary or a cited path updates it in the
+  same change. `docs/VERIFYING-RELEASES.md` says what a user can and cannot check of a store build.
 - No Android features without an iOS counterpart: no UnifiedPush, no credential provider/passkeys
   (dropped by decision), no `AccountManager` (replaced by the handoff).
 

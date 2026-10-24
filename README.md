@@ -59,6 +59,14 @@ Without Xcode, `scripts/check-push-crypto-linux.sh` runs only the push cryptogra
 in Docker. `scripts/capture-screenshots.sh` uses demo fixtures and is a capture workflow,
 not evidence of live push or security qualification. Design contracts are in `docs/specs/`.
 
+## Security and contributing
+
+- Report vulnerabilities privately through the repository's **Security** tab
+  ([policy](https://github.com/Busnes-app/.github/blob/main/SECURITY.md)).
+- [Contributing](CONTRIBUTING.md) — process, tests and coding standard.
+- [Verifying releases](docs/VERIFYING-RELEASES.md) — what you can check of an App Store build, and what you cannot.
+- [Assurance case](docs/ASSURANCE-CASE.md) — threat model, trust boundaries, and why the security requirements are met.
+
 ## License
 
 [MIT](LICENSE.txt).

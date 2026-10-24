@@ -1,0 +1,123 @@
+# Assurance case
+
+[Product overview](../README.md) · [App contracts](../KyAuth/AGENTS.md) · [Verifying releases](VERIFYING-RELEASES.md)
+
+This is the argument that KyAuth for iOS meets its security requirements: what it protects, from
+whom, where the trust boundaries are, and why the design and the code hold at each one. The
+detailed contracts live in [KyAuth/AGENTS.md](../KyAuth/AGENTS.md) and [docs/specs/](specs/).
+Paths are relative to the repository root.
+
+## What KyAuth must protect
+
+KyAuth is an authenticator: it holds TOTP secrets, and a device key that KyIdentity trusts to
+approve sign-ins. Its security requirements:
+
+1. **Only the phone's owner can approve a sign-in.** An approval needs the device key, which
+   never leaves the Secure Enclave, a Face ID or passcode check, and the two digits the browser
+   shows.
+2. **TOTP secrets stay on this device** and readable only after a Face ID or passcode check.
+   No backup, export or sync.
+3. **Answers go only to the paired server.** Nothing in a push or a QR code can redirect an
+   answer or a token elsewhere.
+4. **The push path learns nothing useful and cannot inject requests.** APNs and the relay see
+   only ciphertext; a pairing with push keys refuses plaintext pushes.
+5. **Only listed suite apps get an ID token** through the sign-on handoff, and only for the
+   paired KyIdentity.
+6. **Losing the phone does not hand over the vault.** Locking, the optional PIN with its wipe,
+   and this-device-only Keychain items.
+
+## Threat model
+
+| Attacker | Can | Wants |
+|---|---|---|
+| Network attacker | Read and alter traffic between the phone and KyIdentity | Steal tokens, forge answers |
+| APNs, the push relay | See and replay push traffic | Learn who signs in where; trick the user into approving |
+| Malicious QR code or link | Put any server URL, token or registration URL in front of the user | Pair KyAuth with an attacker's server or send answers there |
+| Another app on the phone | Open `kyauth://` links; write to an App Group only if it is from team `TATYN4X57D` | Get an ID token, read codes |
+| Someone holding an unlocked or stolen phone | Open the app, try PINs | Read TOTP codes, approve a sign-in |
+| Device backup or a later install | Read restored files and Keychain items | Recover the vault or the pairing |
+
+Out of scope: a jailbroken or otherwise compromised iOS, and an attacker who knows the device
+passcode and holds the phone. iOS protections are the foundation this app builds on.
+
+## Trust boundaries
+
+1. **Phone → KyIdentity.** HTTPS only in release builds (`KyAuth/Pairing/PairingEndpoint.swift`,
+   `isAllowedScheme`). Every endpoint is built from the paired server URL, and the one URL a QR
+   code may name, the registration URL, must have the same origin. Redirects are refused, and
+   nothing is cached or kept in cookies (`KyAuth/Networking/HTTPClient.swift`).
+2. **APNs and the relay → phone.** Pushes are RFC 8291 `aes128gcm` sealed to a key pair made on
+   the phone (`Shared/PushCrypto.swift`). The notification extension shows only fixed text.
+   The app re-opens and checks every push itself (`KyAuth/Mfa/MfaChallenge.swift`, `MfaPushParser`).
+3. **Suite app → KyAuth (sign-on handoff).** Requests arrive as files in App Group
+   `group.org.kysecurity.signon`, which only team `TATYN4X57D` apps can write. KyAuth then
+   checks the consumer against `TrustedConsumers`, the age, client ID, origin and issuer
+   (`KyAuth/SignOn/SignOnHandoff.swift`).
+4. **App → its storage.** The vault is an AES-256-GCM file excluded from backup. Its key and
+   every other Keychain item are this-device-only and never synced (`Shared/Keychain.swift`).
+
+## Secure design principles applied
+
+- **Least privilege.** The notification extension holds only the push-key access group,
+  `group.org.kysecurity.authenticator.push`; every other item stays in KyAuth's own group.
+  Push MFA and sign-on never touch the vault key.
+- **Fail-safe defaults.** An unknown purpose, a foreign device or account, or an expiry that is
+  missing or more than ten minutes ahead refuses the push instead of defaulting it. App Attest
+  failing leaves a pairing ungraded, never upgraded.
+- **Complete mediation.** Each signature and each vault unlock needs its own Face ID or passcode
+  check (`KyAuth/Security/UserPresence.swift`).
+- **Economy of mechanism.** No third-party packages: the Xcode project references none, and
+  all cryptography is Apple's CryptoKit, CommonCrypto and Security frameworks.
+- **Separation of privilege.** Approving needs both the device key (Face ID or passcode) and the
+  digits from the browser. The phone never holds the answer.
+- **Open design.** Only published algorithms and formats: AES-GCM, P-256 ECDSA and ECDH, HKDF,
+  PBKDF2, RFC 6238 TOTP, RFC 8291 Web Push, RFC 7523 assertions.
+
+## Common weaknesses and how they are countered
+
+| Weakness | Counter | Where |
+|---|---|---|
+| Push approval fatigue and spoofed requests | The user types the two digits the browser shows; match or decoy numbers in a payload are dropped | `KyAuth/Mfa/MfaChallenge.swift` (`MfaPushParser`) |
+| Push injection or reading by APNs or the relay | Pushes sealed to per-pairing keys; a pairing with keys refuses plaintext pushes | `Shared/PushCrypto.swift` (`PushPayload.fields`) |
+| Answer redirection through a payload or QR code | A payload `serverUrl` is ignored; a QR registration URL must share the server's origin; HTTPS only in release builds | `MfaPushParser`, `KyAuth/Pairing/PairingEndpoint.swift` |
+| Open redirect, response caching | URLSession refuses redirects; ephemeral session, no cookies, no URL cache | `KyAuth/Networking/HTTPClient.swift` |
+| Signed-message ambiguity | Every field of the signed answer is checked for the `\|` separator and the purpose against a fixed set | `MfaMessage.payload` |
+| Device key theft | Secure Enclave P-256, `.privateKeyUsage` and `.userPresence`, passcode required, replaced at every pairing | `KyAuth/Pairing/DeviceSigningKey.swift` |
+| Secrets at rest | Vault AES-256-GCM with a fixed associated-data label; key released only by user presence; file excluded from backup and written with complete file protection | `KyAuth/Totp/TotpVault.swift` |
+| Secrets restored to another device or reinstall | Keychain items `ThisDeviceOnly` and non-synchronizable; a fresh install deletes leftovers | `Shared/Keychain.swift`, `KyAuth/Security/LocalWipe.swift` |
+| PIN guessing | PBKDF2-HMAC-SHA256, 310,000 iterations, random 16-byte salt, constant-time compare; delays on system uptime; the fifth failure erases all data | `KyAuth/Security/PinPolicy.swift` |
+| Token theft through the sign-on handoff | Consumer allow-list, single-use request file, nonce format, 120 s age limit, issuer must equal the paired server | `KyAuth/SignOn/SignOnHandoff.swift` |
+| Malformed `otpauth://` input | Defaults only for omitted parameters; unsupported or malformed algorithm, digits or period refused | `KyAuth/Totp/TotpEntry.swift` |
+| Keyloggers, shoulder surfing | Third-party keyboards refused app-wide; a cover over the app switcher and screen capture | `KyAuth/App/KyAuthApp.swift`, `KyAuth/UI/RootView.swift` |
+| Secrets in logs | The app has no logging calls (`print`, `os_log`, `Logger`, `NSLog`) | whole source tree |
+| Weak randomness | Keys and salts come from CryptoKit, the Secure Enclave and `SecRandomCopyBytes` | `TotpVault`, `PushKeys.generate`, `PinStore.set` |
+
+TOTP uses HMAC-SHA-1 by default because RFC 6238 and nearly every site that issues codes
+require it. HMAC-SHA-1 is not affected by SHA-1's collision weakness. SHA-256 and SHA-512 are
+accepted when the setup code asks for them.
+
+## Residual risk
+
+- No backup, by design: losing the phone, or removing its passcode, loses the codes. The README
+  says so first.
+- The developer-run APNs relay receives the push token and, for a pairing made before push keys
+  existed, KyIdentity's IDs in plaintext (`Distribution/AppStore/app-privacy.md`).
+- On hardware, encrypted pushes and the notification extension are not yet observed;
+  plaintext delivery through the real relay was (`KyAuth/AGENTS.md`, Verification).
+- There is no CI. Tests and builds run on the maintainer's Mac before a release.
+- No independent security audit has taken place.
+
+## Evidence
+
+- **Tests:** `KyAuthTests` covers pairing and endpoint validation, push parsing and the signed
+  message, RFC 8291 vectors, sign-on handoff validation, TOTP, the vault and the PIN policy.
+  Without Xcode, `scripts/check-push-crypto-linux.sh` runs the push crypto vectors against
+  swift-crypto.
+- **Contracts:** wire formats shared with KyIdentity are byte-exact and covered by golden
+  vectors ([KyAuth/AGENTS.md](../KyAuth/AGENTS.md)).
+- **Review:** every change lands through a pull request.
+- **Releases:** signed by Apple; App Attest lets KyIdentity tell a genuine build
+  ([VERIFYING-RELEASES.md](VERIFYING-RELEASES.md)).
+
+This case is updated when a trust boundary or a security requirement changes. A pull request
+that moves one must update this page in the same change.
