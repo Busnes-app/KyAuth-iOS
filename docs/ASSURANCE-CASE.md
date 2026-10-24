@@ -104,7 +104,8 @@ accepted when the setup code asks for them.
   existed, KyIdentity's IDs in plaintext (`Distribution/AppStore/app-privacy.md`).
 - On hardware, encrypted pushes and the notification extension are not yet observed;
   plaintext delivery through the real relay was (`KyAuth/AGENTS.md`, Verification).
-- There is no CI. Tests and builds run on the maintainer's Mac before a release.
+- CI only builds the app and runs CodeQL on the Swift and the workflows (`.github/workflows/codeql.yml`).
+  The tests run on the maintainer's Mac before a release, not in CI.
 - No independent security audit has taken place.
 
 ## Evidence
