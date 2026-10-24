@@ -26,7 +26,7 @@ xcodebuild -project KyAuth.xcodeproj -scheme KyAuth \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' CODE_SIGNING_ALLOWED=NO test
 ```
 
-The repository has no CI, so this run is the gate. Say in the pull request which simulator you
+CI only builds the app for CodeQL (`.github/workflows/codeql.yml`); it runs no tests, so this run is the gate. Say in the pull request which simulator you
 used and what you could not check there: APNs delivery, Secure Enclave signing, App Attest, Face
 ID, the camera, the notification extension and the KyPost sign-on round trip need a physical
 device ([README](README.md#build-and-verification)).
@@ -35,7 +35,7 @@ device ([README](README.md#build-and-verification)).
 
 | Language | Style guide | Enforced by |
 |---|---|---|
-| Swift | The [Swift API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/) | The Swift compiler (Swift 5 language mode) when you build and test; no linter and no CI |
+| Swift | The [Swift API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/) | The Swift compiler (Swift 5 language mode) when you build and test, and in the CodeQL build in CI; no linter |
 
 Nothing checks style automatically. Beyond the compiler: keep to the naming and comment density of
 the file you are editing, use no third-party packages, keep security checks fail-closed, and

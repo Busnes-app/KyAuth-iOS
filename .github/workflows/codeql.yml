@@ -1,0 +1,61 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  schedule:
+    - cron: "29 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Swift needs a real build. A simulator build needs no signing secrets, so
+          # pull requests from forks are scanned the same way.
+          - language: swift
+            build-mode: manual
+            runner: macos-26
+          - language: actions
+            build-mode: none
+            runner: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - if: matrix.language == 'swift'
+        name: Select Xcode 26
+        # The project is upgraded for Xcode 26 (LastUpgradeCheck 2600). Runner images
+        # carry several 26.x and rename them on refresh, so take the newest by glob.
+        run: |
+          xcode=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$xcode" ] || { echo "::error::no Xcode 26 on this runner"; ls -d /Applications/Xcode*; exit 1; }
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+      - uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+      - if: matrix.language == 'swift'
+        name: Build for the simulator
+        # Both targets: the app and the KyAuthPush notification extension it embeds.
+        run: >-
+          xcodebuild -project KyAuth.xcodeproj -scheme KyAuth
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO build
+      - uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          category: /language:${{ matrix.language }}

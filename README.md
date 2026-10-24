@@ -52,7 +52,8 @@ xcodebuild -project KyAuth.xcodeproj -scheme KyAuth \
 
 Simulator tests do not verify APNs delivery, Secure Enclave signing, App Attest, Face ID
 prompts, camera scanning, the notification extension’s shared Keychain group, or KyPost’s
-real sign-on round trip. Those require physical-device acceptance. Recorded hardware
+real sign-on round trip. Those require physical-device acceptance. CI (`.github/workflows/codeql.yml`)
+builds the app for the simulator and runs CodeQL on it; it does not run the tests. Recorded hardware
 observations and exact build contracts are in [KyAuth/AGENTS.md](KyAuth/AGENTS.md).
 
 Without Xcode, `scripts/check-push-crypto-linux.sh` runs only the push cryptographic vectors
