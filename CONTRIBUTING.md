@@ -1,47 +1,55 @@
 # Contributing to KyAuth for iOS
 
-KyAuth holds TOTP secrets and the device key KyIdentity trusts to approve sign-ins. A
-contribution must keep the contracts in [KyAuth/AGENTS.md](KyAuth/AGENTS.md) and the argument in
-[docs/ASSURANCE-CASE.md](docs/ASSURANCE-CASE.md) true.
+KyAuth is the KyIdentity authenticator for iPhone and iPad: TOTP codes, Push MFA approvals, KyIdentity sign-on, and passkeys. Contributions must keep authenticator secrets on the device and keep every sign-in approval behind an explicit human action.
 
-## How to contribute
+## Before contributing
 
-- **Bugs and ideas:** open an issue at <https://github.com/Busnes-app/KyAuth-iOS/issues>.
-  Report vulnerabilities privately instead: the repository's **Security** tab, **Report a
-  vulnerability** ([policy](https://github.com/Busnes-app/.github/blob/main/SECURITY.md)).
-- **Changes:** branch off `master`, open a pull request against `master`, and describe what you
-  ran. Every change lands through a pull request.
-- **Docs follow the DOX chain:** read every `AGENTS.md` from the root to the files you touch
-  before editing, and update the nearest one when a contract changes ([AGENTS.md](AGENTS.md)).
-- A change that moves a trust boundary or a security requirement updates
-  [docs/ASSURANCE-CASE.md](docs/ASSURANCE-CASE.md) in the same pull request.
+Read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) and [SECURITY.md](SECURITY.md),
+the [README](README.md), and any AGENTS.md in the subtree you are about to
+touch. Open an issue before proposing a feature larger than a bug fix or
+documentation change.
 
-## Tests
+Keep changes small, reuse existing code, and fix the shared root cause rather
+than the reported symptom. New non-trivial logic ships with a runnable test or
+self-check.
 
-Add a focused test for non-trivial logic, in `KyAuthTests/`. Run the suite before you open the
-pull request (choose an installed simulator):
+## Security requirements
 
-```sh
-xcodebuild -project KyAuth.xcodeproj -scheme KyAuth \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' CODE_SIGNING_ALLOWED=NO test
-```
+- TOTP seeds, passkey material, and push-approval keys stay on the device in the Keychain / Secure Enclave; never transmit them off-device or write them to logs or crash reports.
+- A sign-in or MFA approval happens only on an explicit user action, never automatically; a notification alone is not consent.
+- Do not add telemetry, phone-home, analytics, or unconfigured third-party
+  services.
+- Do not add silent security fallbacks; fail closed with a readable error and a
+  remediation step.
+- Name and document any security trade-off in [SECURITY.md](SECURITY.md) before
+  it merges.
 
-CI only builds the app for CodeQL (`.github/workflows/codeql.yml`); it runs no tests, so this run is the gate. Say in the pull request which simulator you
-used and what you could not check there: APNs delivery, Secure Enclave signing, App Attest, Face
-ID, the camera, the notification extension and the KyPost sign-on round trip need a physical
-device ([README](README.md#build-and-verification)).
+## Verification
 
-## Coding standard
+Run the checks that apply to the files you changed, and the repository's
+full required checks before hand-off. Record the exact commands and their
+results in the pull request.
 
-| Language | Style guide | Enforced by |
-|---|---|---|
-| Swift | The [Swift API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/) | The Swift compiler (Swift 5 language mode) when you build and test, and in the CodeQL build in CI; no linter |
+## AI attribution
 
-Nothing checks style automatically. Beyond the compiler: keep to the naming and comment density of
-the file you are editing, use no third-party packages, keep security checks fail-closed, and
-follow the UI rules in [KyAuth/AGENTS.md](KyAuth/AGENTS.md#work-guidance).
+AI-assisted contributions are welcome; undisclosed ones are not. Disclose
+material AI assistance in the pull request — the tool, what it changed, and what
+you personally ran, read, and verified — and add a commit trailer naming any
+tool that materially contributed. You are the author of the code you submit for
+every purpose, regardless of how it was produced.
+
+## Pull requests
+
+Branch off `main` with a focused name, and use a Conventional Commit subject
+(`fix:`, `feat:`, `docs:`, `refactor:`, `test:`, or `chore:`). The pull request
+explains why the change exists, the verification performed, the security impact,
+and any known limitations.
+
+Every pull request gets an adversarial review pass; see
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md#hostile-reviews-are-about-code-never-people)
+for what that is and the boundary it keeps.
 
 ## Licence
 
-KyAuth is MIT-licensed ([LICENSE.txt](LICENSE.txt)). By contributing you agree that your
-contribution is licensed the same way.
+KyAuth for iOS is licensed under the MIT License. See [LICENSE.txt](LICENSE.txt).
+
