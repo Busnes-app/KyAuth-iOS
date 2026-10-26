@@ -229,6 +229,10 @@ and retain their own identity, sealer label and collection adapters.
 
 When the user requests a durable behavior change, record it here or in the relevant child AGENTS.md
 
+## Verification
+
+- Scorecard (`.github/workflows/scorecard.yml`) publishes public supply-chain security results on default-branch pushes, weekly and after branch-protection changes. Keep publishing restricted to the default branch, action pins immutable, checkout credentials disabled and OIDC/code-scanning writes scoped to the analysis job. README’s live Scorecard badge needs a successful published run.
+
 ## Child DOX Index
 
 - `KyAuth/` — the KyAuth iOS app: product contracts, file ownership and verification.
