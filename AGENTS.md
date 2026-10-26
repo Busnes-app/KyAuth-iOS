@@ -236,7 +236,9 @@ When the user requests a durable behavior change, record it here or in the relev
   the standard-library fixture server, a reserved loopback hostname and a root
   imported only into that simulator qualify the real HTTPClient. Baseline
   observations do not establish a key-size policy. Generated keys/results stay
-  in ignored `.tls-fixtures/`; the CA private key is never stored.
+  in ignored `.tls-fixtures/`; the CA private key is never stored. CI retains
+  only each results directory, including its xcresult and public fixture
+  counters; enable hidden-file upload because the parent directory is hidden.
 
 - Scorecard (`.github/workflows/scorecard.yml`) publishes public supply-chain security results on default-branch pushes, weekly and after branch-protection changes. Keep publishing restricted to the default branch, action pins immutable, checkout credentials disabled and OIDC/code-scanning writes scoped to the analysis job. README’s live Scorecard badge needs a successful published run.
 

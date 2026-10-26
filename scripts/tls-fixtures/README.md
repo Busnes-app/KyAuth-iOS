@@ -33,8 +33,12 @@ touches a physical device. Erase the disposable simulator when done to remove
 its test root. CI performs this setup only on its ephemeral macOS runner.
 
 Results are retained in `.tls-fixtures/results-*/TestResults.xcresult`, with
-fixture startup output in `.tls-fixtures/server.log`. No request body/header or
-real credentials are logged. The fixture server is stopped when the runner exits.
+public post-suite counters alongside it in `fixture-stats.json` and the console.
+Fixture startup output is in `.tls-fixtures/server.log`. CI explicitly includes
+hidden paths when uploading only the results directories; generated certificate
+keys are outside that upload. No request body/header or real credentials are
+logged. The fixture server is stopped when the runner exits; a failed test run
+still captures counters and retains its failing exit status.
 
 ## Reading the measurements
 

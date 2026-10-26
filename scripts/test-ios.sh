@@ -51,6 +51,15 @@ if [ "$fixture_ready" != true ]; then
 fi
 
 fixture_results=$(mktemp -d "$repo_root/.tls-fixtures/results-XXXXXXXX")
+fixture_test_status=0
 xcodebuild -project KyAuth.xcodeproj -scheme KyAuth \
   -destination "platform=iOS Simulator,id=$fixture_simulator" \
-  -resultBundlePath "$fixture_results/TestResults.xcresult" CODE_SIGNING_ALLOWED=NO test
+  -resultBundlePath "$fixture_results/TestResults.xcresult" CODE_SIGNING_ALLOWED=NO test || fixture_test_status=$?
+
+# Xcode can retain Swift Testing stdout only in the result bundle. Keep a
+# separate public counter snapshot in both the console and the artifact.
+echo 'KYAUTH_TLS_FIXTURE_STATS (public fixture counters, after native tests)'
+curl --silent --show-error --fail --noproxy kyauth-tls-test.invalid \
+  --cacert .tls-fixtures/certificates/root.pem https://kyauth-tls-test.invalid:46100/stats \
+  | tee "$fixture_results/fixture-stats.json"
+exit "$fixture_test_status"
