@@ -63,9 +63,15 @@ Use an installed simulator destination (list them with `xcodebuild -showdestinat
 the project/scheme):
 
 ```sh
-xcodebuild -project KyAuth.xcodeproj -scheme KyAuth \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' CODE_SIGNING_ALLOWED=NO test
+bash scripts/test-ios.sh DISPOSABLE_SIMULATOR_UUID
 ```
+
+The full suite also needs Go 1.26.10 and the reserved host mapping
+`127.0.0.1 kyauth-tls-test.invalid`. Use a disposable simulator: the runner imports
+an ephemeral fixture root there and starts HTTPS peers on host loopback only.
+[Native TLS fixture instructions](scripts/tls-fixtures/README.md) explain the
+baseline observations, generated files and controls. No application TLS or
+trust setting is changed by the fixture setup.
 
 Simulator tests do not verify APNs delivery, Secure Enclave signing, App Attest, Face ID
 prompts, camera scanning, the notification extension’s shared Keychain group, or KyPost’s

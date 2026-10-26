@@ -17,6 +17,7 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 - `SignOn/`: `DeviceAssertion`, `TokenClient`, `SignOnHandoff` + `TrustedConsumers`.
 - `Totp/`: entries, generator, `otpauth://` parsing, `TotpVault`.
 - `Security/`: `UserPresence`, PIN policy and store, `IdleLock`, `LocalWipe`.
+- `Networking/`: the ephemeral HTTPClient session, native trust and redirect refusal.
 - `../Shared/` (compiled into the app and the extension): `Keychain` + `KeychainCodable`, `PushKeyStore`,
   `PushCrypto` (`PushKeys`, RFC 8291 `WebPush.decrypt`, `PushPayload`).
 - `../KyAuthPush/`: the notification service extension (`org.kysecurity.authenticator.push`).
@@ -121,8 +122,8 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 ## Verification
 
 ```bash
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project KyAuth.xcodeproj \
-  -scheme KyAuth -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' CODE_SIGNING_ALLOWED=NO test
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  bash scripts/test-ios.sh DISPOSABLE_SIMULATOR_UUID
 ```
 
 Not verifiable in the simulator: APNs delivery, Secure Enclave signing, App Attest, Face ID prompts,
@@ -131,6 +132,10 @@ shared Keychain group. Installed on an iPhone, and plaintext APNs delivery throu
 observed there (2026-10-13); encrypted pushes and the extension are not yet observed on hardware.
 
 CI (`.github/workflows/tests.yml`) runs the complete simulator test suite on Xcode 26.
+The fixture runner needs Go 1.26.10 and a host mapping of
+`127.0.0.1 kyauth-tls-test.invalid`; it imports only the generated test root into
+the selected simulator. See `scripts/tls-fixtures/README.md`. Native baseline
+prints alone are not proof that undersized keys are refused.
 Without Xcode, `scripts/check-push-crypto-linux.sh` (Docker) runs `PushCryptoTests` and
 `TotpTests` against swift-crypto with a persistent SwiftPM dependency cache. It does not
 verify Apple CryptoKit, vault/Keychain integration or SwiftUI. The encrypted mixed-legacy

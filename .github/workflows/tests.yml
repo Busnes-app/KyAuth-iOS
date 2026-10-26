@@ -36,17 +36,23 @@ jobs:
           devices = json.load(sys.stdin)["devices"]
           print(next(d["udid"] for group in devices.values() for d in group if d["name"].startswith("iPhone")))')
           echo "id=$device" >> "$GITHUB_OUTPUT"
+      - name: Set up the standard-library TLS fixture server
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26.10'
+          cache-dependency-path: scripts/tls-fixtures/go.mod
+      - name: Verify host TLS fixtures
+        run: GODEBUG=fips140=off go -C scripts/tls-fixtures test -race -count=1 ./...
+      - name: Configure the disposable runner's fixture hostname
+        run: printf '127.0.0.1 kyauth-tls-test.invalid\n' | sudo tee -a /etc/hosts > /dev/null
       - name: Run the complete simulator test suite
         env:
           SIMULATOR_ID: ${{ steps.destination.outputs.id }}
-        run: >-
-          xcodebuild -project KyAuth.xcodeproj -scheme KyAuth
-          -destination "platform=iOS Simulator,id=$SIMULATOR_ID"
-          -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=NO test
+        run: bash scripts/test-ios.sh "$SIMULATOR_ID"
       - name: Retain test results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ios-test-results
-          path: TestResults.xcresult
+          path: .tls-fixtures/results-*/TestResults.xcresult
           if-no-files-found: ignore
