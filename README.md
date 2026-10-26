@@ -1,5 +1,7 @@
 # KyAuth for iOS
 
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15922/badge)](https://www.bestpractices.dev/projects/15922)
+
 KyAuth is a native authenticator for iPhone and iPad. Generate local TOTP codes, approve
 KyIdentity push MFA requests with number matching, and sign in to supported suite apps
 through the KyAuth handoff. It is the iOS counterpart of
