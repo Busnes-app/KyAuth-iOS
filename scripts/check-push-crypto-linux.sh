@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Runs KyAuthTests/PushCryptoTests.swift on a host without Xcode (needs Docker): builds Shared/PushCrypto.swift
-# and KyAuth/Mfa/MfaChallenge.swift unchanged except `import CryptoKit` -> `import Crypto` (swift-crypto,
-# CryptoKit's API on Linux). It proves the RFC 8291 code, not CryptoKit itself or anything on a device.
+# Runs push and TOTP cryptographic tests without Xcode (needs Docker). Sources change only
+# `import CryptoKit` to `import Crypto` (swift-crypto, CryptoKit's API on Linux).
+# This verifies portable algorithms, not Apple CryptoKit, the vault or device behavior.
 set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 # A fresh private directory each run: a fixed path in a shared temp directory could be planted by
@@ -10,6 +10,8 @@ work="$(mktemp -d "${TMPDIR:-/tmp}/kyauth-push-crypto-check.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/Sources/KyAuth" "$work/Tests/KyAuthTests"
 sed 's/^import CryptoKit$/import Crypto/' "$repo/Shared/PushCrypto.swift" > "$work/Sources/KyAuth/PushCrypto.swift"
+sed 's/^import CryptoKit$/import Crypto/' "$repo/KyAuth/Totp/TotpEntry.swift" > "$work/Sources/KyAuth/TotpEntry.swift"
+cp "$repo/KyAuthTests/TotpTests.swift" "$work/Tests/KyAuthTests/"
 cp "$repo/KyAuth/Mfa/MfaChallenge.swift" "$work/Sources/KyAuth/"
 cp "$repo/KyAuthTests/PushCryptoTests.swift" "$work/Tests/KyAuthTests/"
 cat > "$work/Sources/KyAuth/Stubs.swift" <<'SWIFT'
@@ -43,6 +45,9 @@ let package = Package(
     ]
 )
 SWIFT
+cache="${XDG_CACHE_HOME:-$HOME/.cache}/kyauth-ios-swift"
+mkdir -p "$cache"
 # As this user, so the build output it leaves in $work is ours to delete.
 docker run --rm --memory=6g --user "$(id -u):$(id -g)" -e HOME=/work/.home \
-    -v "$work:/work" -w /work swift:6.1 swift test 2>&1
+    -v "$work:/work" -v "$cache:/cache" -w /work swift:6.1 \
+    swift test --cache-path /cache --jobs 4 2>&1

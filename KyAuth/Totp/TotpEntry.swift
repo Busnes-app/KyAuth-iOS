@@ -24,7 +24,7 @@ struct TotpEntry: Codable, Equatable, Identifiable {
         guard !title.isBlank else { throw TotpError.invalid("Enter a name") }
         guard (6...8).contains(digits) else { throw TotpError.invalid("Codes must have 6 to 8 digits") }
         guard periodSeconds > 0 else { throw TotpError.invalid("The period must be positive") }
-        guard TotpGenerator.isUsableSecret(secretBase32) else { throw TotpError.invalid("TOTP secret is not usable Base32") }
+        _ = try TotpGenerator.validatedSecret(secretBase32)
         self.id = id
         self.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         self.secretBase32 = secretBase32
@@ -39,22 +39,28 @@ struct TotpEntry: Codable, Equatable, Identifiable {
 
 enum TotpError: LocalizedError, Equatable {
     case invalid(String)
+    case shortSecret
 
     var errorDescription: String? {
         switch self {
         case .invalid(let message): message
+        case .shortSecret: "Setup key is too short (minimum 16 decoded bytes). Set up this account again at its service using a new key. Keep your recovery codes until the new setup works."
         }
     }
 }
 
 enum TotpGenerator {
+    // RFC 4226 requires at least 128 key bits and recommends 160.
+    static let minimumSecretBytes = 16
     private static let alphabet = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567")
     private static let pow10: [UInt32] = [1, 10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000]
 
     static func code(_ entry: TotpEntry, at epochSeconds: Int64) throws -> String {
+        // Codable restores legacy records without the validating initializer.
+        let secret = try validatedSecret(entry.secretBase32)
         let counter = UInt64(epochSeconds / entry.periodSeconds).bigEndian
         let message = withUnsafeBytes(of: counter) { Data($0) }
-        let key = SymmetricKey(data: try base32Decode(entry.secretBase32))
+        let key = SymmetricKey(data: secret)
         let digest: [UInt8] = switch entry.algorithm {
         case .sha1: Array(HMAC<Insecure.SHA1>.authenticationCode(for: message, using: key))
         case .sha256: Array(HMAC<SHA256>.authenticationCode(for: message, using: key))
@@ -79,10 +85,15 @@ enum TotpGenerator {
         return "\(code.prefix(3)) \(code.suffix(3))"
     }
 
-    /// True when the secret decodes to at least one byte: one Base32 character decodes to nothing,
-    /// and an empty HMAC key would make every code meaningless.
+    /// Import and generation policy; decoding a legacy vault remains lossless.
     static func isUsableSecret(_ secret: String) -> Bool {
-        (try? base32Decode(secret).isEmpty == false) ?? false
+        (try? validatedSecret(secret)) != nil
+    }
+
+    static func validatedSecret(_ secret: String) throws -> Data {
+        let decoded = try base32Decode(secret)
+        guard decoded.count >= minimumSecretBytes else { throw TotpError.shortSecret }
+        return decoded
     }
 
     static func base32Decode(_ input: String) throws -> Data {
