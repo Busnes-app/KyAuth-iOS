@@ -24,7 +24,12 @@ import (
 
 const fixtureHost = "kyauth-tls-test.invalid"
 
-var fixtureNames = []string{"control", "rsa2048", "rsa2047", "p256"}
+var fixtureNames = []string{
+	"control", "rsa2048", "rsa2047", "p256", "rsa1024", "p384", "p521",
+	"intermediate1024", "intermediate2047", "root1024", "root2047",
+	"trusted1024", "trusted2047", "trusted2048", "wronghost", "expired", "untrusted",
+	"tls10", "tls11", "tls12", "tls13",
+}
 
 type counters struct {
 	bytes       atomic.Uint64
@@ -93,8 +98,19 @@ func loadFixtures(directory string, basePort int) (map[string]*fixture, error) {
 			return nil, err
 		}
 		counts := &counters{}
+		minimum, maximum := uint16(tls.VersionTLS12), uint16(0)
+		switch name {
+		case "tls10":
+			minimum, maximum = tls.VersionTLS10, tls.VersionTLS10
+		case "tls11":
+			minimum, maximum = tls.VersionTLS11, tls.VersionTLS11
+		case "tls12":
+			minimum, maximum = tls.VersionTLS12, tls.VersionTLS12
+		case "tls13":
+			minimum, maximum = tls.VersionTLS13, tls.VersionTLS13
+		}
 		f := &fixture{listener: fixtureListener{Listener: listener, counts: counts, config: &tls.Config{
-			Certificates: []tls.Certificate{key}, MinVersion: tls.VersionTLS12, NextProtos: []string{"http/1.1"},
+			Certificates: []tls.Certificate{key}, MinVersion: minimum, MaxVersion: maximum, NextProtos: []string{"http/1.1"},
 		}}, counts: counts, leaf: key.Certificate[0]}
 		f.server = &http.Server{ReadHeaderTimeout: 3 * time.Second, ReadTimeout: 5 * time.Second,
 			WriteTimeout: 5 * time.Second, IdleTimeout: 30 * time.Second}
@@ -111,6 +127,12 @@ func loadFixtures(directory string, basePort int) (map[string]*fixture, error) {
 			w.Header().Set("Content-Type", "application/json")
 			var result any = map[string]bool{"ok": true}
 			switch {
+			case r.URL.Path == "/cases":
+				cases := make([]map[string]any, 0, len(fixtureNames)-1)
+				for _, name := range fixtureNames[1:] {
+					cases = append(cases, map[string]any{"name": name, "port": fixtures[name].listener.Addr().(*net.TCPAddr).Port})
+				}
+				result = cases
 			case r.URL.Path == "/stats":
 				stats := make(map[string]map[string]uint64)
 				for name, peer := range fixtures {
@@ -172,7 +194,7 @@ func main() {
 	generate := flag.Bool("generate", false, "replace public fixtures; CA private key is never stored")
 	port := flag.Int("base-port", 46100, "first loopback port; zero selects ephemeral ports")
 	flag.Parse()
-	if flag.NArg() != 0 || *port < 0 || *port > 65532 {
+	if flag.NArg() != 0 || *port < 0 || *port > 65535-len(fixtureNames)+1 {
 		fmt.Fprintln(os.Stderr, "invalid fixture arguments")
 		os.Exit(2)
 	}

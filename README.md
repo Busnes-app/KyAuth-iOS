@@ -70,8 +70,9 @@ The full suite also needs Go 1.26.10 and the reserved host mapping
 `127.0.0.1 kyauth-tls-test.invalid`. Use a disposable simulator: the runner imports
 an ephemeral fixture root there and starts HTTPS peers on host loopback only.
 [Native TLS fixture instructions](scripts/tls-fixtures/README.md) explain the
-baseline observations, generated files and controls. No application TLS or
-trust setting is changed by the fixture setup.
+key-floor regressions, generated files and controls. The app retains native
+certificate trust and additionally checks actual RSA/EC bits across the evaluated
+chain; see [server certificate requirements](SECURITY.md#operating-requirements).
 
 Simulator tests do not verify APNs delivery, Secure Enclave signing, App Attest, Face ID
 prompts, camera scanning, the notification extension’s shared Keychain group, or KyPost’s

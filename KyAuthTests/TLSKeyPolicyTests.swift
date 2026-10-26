@@ -9,13 +9,18 @@ private struct TLSFixtureStats: Decodable {
     let connections: UInt64
 }
 
+private struct TLSFixtureCase: Decodable {
+    let name: String
+    let port: Int
+}
+
 private struct TLSFixtureCertificate: Decodable {
     let certificate: String
 }
 
 /// Real TLS to the owned host fixture. No URLProtocol mock or trust override.
 @Suite(.serialized)
-struct TLSBaselineTests {
+struct TLSKeyPolicyTests {
     private let host = "kyauth-tls-test.invalid"
 
     private func url(_ port: Int, _ path: String) -> URL {
@@ -42,9 +47,22 @@ struct TLSBaselineTests {
         print("KYAUTH_TLS_ATTRIBUTES actualRSA=2047 blockBytes=\(SecKeyGetBlockSize(key))")
     }
 
-    @Test func unchangedClientTLSBaselineAndRedirectRefusal() async throws {
+    @Test func chainFloorsNativeTrustVersionsAndRedirectRefusal() async throws {
         print("KYAUTH_TLS_PLATFORM \(ProcessInfo.processInfo.operatingSystemVersionString)")
-        for (name, port, strong) in [("rsa2048", 46101, true), ("rsa2047", 46102, false), ("p256", 46103, true)] {
+        let response = try await HTTPClient.shared.send("GET", url(46100, "/cases"), body: nil)
+        try #require(response.status == 200)
+        let cases = try JSONDecoder().decode([TLSFixtureCase].self, from: response.body)
+        let expected: Set<String> = [
+            "rsa2048", "rsa2047", "p256", "rsa1024", "p384", "p521",
+            "intermediate1024", "intermediate2047", "root1024", "root2047",
+            "trusted1024", "trusted2047", "trusted2048", "wronghost", "expired", "untrusted",
+            "tls10", "tls11", "tls12", "tls13",
+        ]
+        try #require(cases.count == expected.count && Set(cases.map(\.name)) == expected)
+        let strong: Set<String> = ["rsa2048", "p256", "p384", "p521", "trusted2048", "tls12", "tls13"]
+        for item in cases {
+            let name = item.name
+            let port = item.port
             let before = try await stats(name)
             let client = HTTPClient()
             var accepted = false
@@ -52,18 +70,21 @@ struct TLSBaselineTests {
                 let response = try await client.postJSON(url(port, "/probe"), ["public": "canary"])
                 accepted = response.status == 200
             } catch {
-                // Baseline only: native rejection is recorded, not mistaken for a repair.
+                // Refusal must be accompanied by zero application bytes at the peer.
             }
             let after = try await stats(name)
             try #require(after.bytes >= before.bytes)
             let bytes = after.bytes - before.bytes
-            print("KYAUTH_TLS_BASELINE case=\(name) accepted=\(accepted) applicationBytes=\(bytes)")
-            if strong {
+            print("KYAUTH_TLS_POLICY case=\(name) accepted=\(accepted) applicationBytes=\(bytes)")
+            #expect(after.connections > before.connections)
+            if strong.contains(name) {
                 #expect(accepted)
                 #expect(bytes > 0)
+                #expect(after.requests == before.requests + 1)
             } else {
-                // The result decides whether additional production enforcement is needed.
-                #expect(accepted ? bytes > 0 : bytes == 0)
+                #expect(!accepted)
+                #expect(bytes == 0)
+                #expect(after.requests == before.requests)
             }
             if name == "rsa2048", accepted {
                 let repeated = try await client.postJSON(url(port, "/probe"), ["public": "repeat"])

@@ -17,7 +17,7 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 - `SignOn/`: `DeviceAssertion`, `TokenClient`, `SignOnHandoff` + `TrustedConsumers`.
 - `Totp/`: entries, generator, `otpauth://` parsing, `TotpVault`.
 - `Security/`: `UserPresence`, PIN policy and store, `IdleLock`, `LocalWipe`.
-- `Networking/`: the ephemeral HTTPClient session, native trust and redirect refusal.
+- `Networking/`: the ephemeral HTTPClient session, native trust plus literal certificate-key floors and redirect refusal.
 - `../Shared/` (compiled into the app and the extension): `Keychain` + `KeychainCodable`, `PushKeyStore`,
   `PushCrypto` (`PushKeys`, RFC 8291 `WebPush.decrypt`, `PushPayload`).
 - `../KyAuthPush/`: the notification service extension (`org.kysecurity.authenticator.push`).
@@ -44,6 +44,11 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   `docs/specs/2026-10-11-ios-signon-handoff.md`. Change either only together with its counterpart
   (KyIdentity-server, KyPost-for-Mac).
 - Release builds require HTTPS; debug builds also accept loopback HTTP.
+- HTTPS retains the challenge’s normal SSL/hostname/time/anchor evaluation, then
+  checks every evaluated certificate including its anchor: actual RSA at least
+  2048 bits or prime EC at least 256 bits. Missing/unknown key metadata refuses
+  the challenge. Never use rounded RSA block bytes, replace trust policies/roots,
+  add an insecure override or follow a redirect to recover from refusal.
 - `PrivacyInfo.xcprivacy` declares every required-reason API the app uses (now `UserDefaults`
   CA92.1, `systemUptime` 35F9.1, file timestamps C617.1) and no tracking. Collected data: Device ID
   and User ID, app functionality, linked to the user (they are part of signing in), because the
@@ -133,9 +138,10 @@ observed there (2026-10-13); encrypted pushes and the extension are not yet obse
 
 CI (`.github/workflows/tests.yml`) runs the complete simulator test suite on Xcode 26.
 The fixture runner needs Go 1.26.10 and a host mapping of
-`127.0.0.1 kyauth-tls-test.invalid`; it imports only the generated test root into
-the selected simulator. See `scripts/tls-fixtures/README.md`. Native baseline
-prints alone are not proof that undersized keys are refused.
+`127.0.0.1 kyauth-tls-test.invalid`; it imports only generated fixture anchors
+into the selected disposable simulator. See `scripts/tls-fixtures/README.md`.
+TLSKeyPolicyTests requires zero application bytes on refused weak/key/trust/
+protocol cases; strong peer and directly trusted-peer controls must succeed.
 Without Xcode, `scripts/check-push-crypto-linux.sh` (Docker) runs `PushCryptoTests` and
 `TotpTests` against swift-crypto with a persistent SwiftPM dependency cache. It does not
 verify Apple CryptoKit, vault/Keychain integration or SwiftUI. The encrypted mixed-legacy

@@ -30,7 +30,9 @@ if [ "$fixture_state" != Booted ]; then
   xcrun simctl boot "$fixture_simulator"
 fi
 xcrun simctl bootstatus "$fixture_simulator" -b
-xcrun simctl keychain "$fixture_simulator" add-root-cert .tls-fixtures/certificates/root.pem
+for fixture_anchor in .tls-fixtures/certificates/root.pem .tls-fixtures/certificates/anchor-*.pem; do
+  xcrun simctl keychain "$fixture_simulator" add-root-cert "$fixture_anchor"
+done
 
 GODEBUG=fips140=off .tls-fixtures/server -certificates .tls-fixtures/certificates > .tls-fixtures/server.log 2>&1 &
 fixture_pid=$!

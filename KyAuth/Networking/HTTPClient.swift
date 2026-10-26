@@ -1,4 +1,5 @@
 import Foundation
+import Security
 
 /// One request to KyIdentity. Redirects are refused and nothing is cached or stored in cookies:
 /// every endpoint KyAuth calls is pinned to the paired origin, and a redirect would leave it.
@@ -44,7 +45,7 @@ final class HTTPClient: Sendable {
         config.httpCookieStorage = nil
         config.httpShouldSetCookies = false
         config.urlCache = nil
-        session = URLSession(configuration: config, delegate: RedirectRefusal(), delegateQueue: nil)
+        session = URLSession(configuration: config, delegate: TransportPolicy(), delegateQueue: nil)
     }
 
     func send(_ method: String, _ url: URL, body: Data?, contentType: String = "application/json") async throws -> HTTPResponse {
@@ -70,7 +71,35 @@ final class HTTPClient: Sendable {
     }
 }
 
-private final class RedirectRefusal: NSObject, URLSessionTaskDelegate, Sendable {
+private final class TransportPolicy: NSObject, URLSessionTaskDelegate, Sendable {
+    func urlSession(
+        _ session: URLSession,
+        didReceive challenge: URLAuthenticationChallenge
+    ) async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
+        guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust else {
+            return (.performDefaultHandling, nil)
+        }
+        // Preserve the platform's hostname, time, policy and anchor checks.
+        guard let trust = challenge.protectionSpace.serverTrust,
+              SecTrustEvaluateWithError(trust, nil),
+              let chain = SecTrustCopyCertificateChain(trust) as? [SecCertificate],
+              !chain.isEmpty else { return (.cancelAuthenticationChallenge, nil) }
+
+        for certificate in chain {
+            guard let key = SecCertificateCopyKey(certificate),
+                  let attributes = SecKeyCopyAttributes(key) as? [String: Any],
+                  let kind = attributes[kSecAttrKeyType as String] as? String,
+                  let bits = attributes[kSecAttrKeySizeInBits as String] as? Int else {
+                return (.cancelAuthenticationChallenge, nil)
+            }
+            // RSA block size rounds 2047 bits to 256 bytes; use actual key bits.
+            let strong = (kind == kSecAttrKeyTypeRSA as String && bits >= 2048)
+                || (kind == kSecAttrKeyTypeECSECPrimeRandom as String && bits >= 256)
+            guard strong else { return (.cancelAuthenticationChallenge, nil) }
+        }
+        return (.useCredential, URLCredential(trust: trust))
+    }
+
     func urlSession(
         _ session: URLSession,
         task: URLSessionTask,

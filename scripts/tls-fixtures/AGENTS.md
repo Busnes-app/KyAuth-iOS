@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Measure the actual KyAuth iOS HTTPClient against controlled HTTPS peers on an
+Qualify the actual KyAuth iOS HTTPClient against controlled HTTPS peers on an
 owned simulator. This is test infrastructure, separate from the application.
 
 ## Ownership
@@ -18,8 +18,11 @@ test keys. Root owns CI and the simulator runner; KyAuth owns production TLS.
   key is discarded instead of being stored.
 - The server permits undersized fixture keys to test client refusal. This
   changes no application trust or TLS setting.
-- Baseline observations are measurements, not a passing key-policy assertion.
-- Import the fixture root only into an explicitly selected disposable simulator.
+- Calibrate weak leaf/intermediate/root and directly trusted peers as usable
+  fixtures, plus strong RSA/EC, trust failures and exact TLS versions. Native
+  refusal must receive zero application bytes; Go calibration is separate.
+- Import only generated fixture anchors into an explicitly selected disposable
+  simulator. Never import the untrusted control root.
 
 ## Work Guidance
 

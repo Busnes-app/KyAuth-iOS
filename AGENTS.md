@@ -233,9 +233,9 @@ When the user requests a durable behavior change, record it here or in the relev
 
 - `.github/workflows/tests.yml` runs the complete iOS simulator suite on pushes and pull requests; CodeQL separately builds/scans the app and extension. Product-specific TOTP/vault contracts and local checks live in `KyAuth/AGENTS.md`.
 - Native TLS tests run through `scripts/test-ios.sh DISPOSABLE_SIMULATOR_UUID`:
-  the standard-library fixture server, a reserved loopback hostname and a root
-  imported only into that simulator qualify the real HTTPClient. Baseline
-  observations do not establish a key-size policy. Generated keys/results stay
+  the standard-library fixture server, a reserved loopback hostname and generated anchors
+  imported only into that simulator qualify the real HTTPClient’s native trust,
+  literal all-chain key floor, protocol behavior and redirect refusal. Generated keys/results stay
   in ignored `.tls-fixtures/`; the CA private key is never stored. CI retains
   only each results directory, including its xcresult and public fixture
   counters; enable hidden-file upload because the parent directory is hidden.

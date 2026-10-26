@@ -1,6 +1,6 @@
 # Security Policy
 
-KyAuth is an authenticator client for KyIdentity on iOS. It holds TOTP seeds, passkey credentials, and push-approval keys locally and approves sign-ins on an explicit user action.
+KyAuth is an authenticator client for KyIdentity on iOS. It holds TOTP seeds and push-approval keys locally and approves sign-ins on an explicit user action.
 
 ## Reporting vulnerabilities
 
@@ -19,11 +19,20 @@ and disclosure.
 ## Operating requirements
 
 - Fetch sign-in requests over HTTPS from the configured KyIdentity only; refuse redirects to other hosts.
+- Keep native certificate name, validity and trust validation. Every certificate in
+  the evaluated chain, including its anchor, must have an actual RSA key of at
+  least 2048 bits or prime-curve EC key of at least 256 bits; unknown/missing
+  key metadata is refused. No trust bypass or weak-key opt-out is provided.
+- If an existing server uses an undersized certificate or CA, retain working
+  administrator access and arrange a verified strong certificate/chain before
+  upgrading it. Preserve pairing, device keys and vault data; resetting them
+  cannot repair server TLS. Strong private CAs installed through iOS remain
+  subject to normal trust and the same floor.
 - Do not weaken the Keychain protection class or add an insecure transport exception to quiet a first run.
 
 ## Security-sensitive changes
 
-Changes to Keychain/Secure Enclave storage, enrollment, push-approval handling, passkey flows, or logging require tests for both the expected path and the relevant
+Changes to Keychain/Secure Enclave storage, enrollment, push-approval handling, TLS trust, or logging require tests for both the expected path and the relevant
 failure or attack path, plus a description of the trust boundary in the pull
 request.
 
