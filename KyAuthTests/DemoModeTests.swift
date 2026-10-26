@@ -50,7 +50,7 @@ struct DemoModeTests {
         #expect(model.lockState == .unlocked)
         #expect(model.entries.map(\.id) == DemoMode.entries().map(\.id))
 
-        try model.addEntry(try TotpEntry(title: "Added", secretBase32: "JBSWY3DPEHPK3PXP"))
+        try model.addEntry(try TotpEntry(title: "Added", secretBase32: "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP"))
         #expect(model.entries.count == 4)
 
         model.lock()
@@ -58,6 +58,27 @@ struct DemoModeTests {
         #expect(model.lockState == .locked)
         #expect(model.entries.isEmpty)
         #expect(model.pendingChallenge == nil)
+    }
+
+    @Test func modelRefusesWeakAddsReplacementsAndCopies() throws {
+        let model = AppModel(account: nil)
+        model.startDemo()
+        let original = model.entries
+        var weak = original[0]
+        weak.secretBase32 = "MY"
+        // A decoded/mutable entry bypasses the constructor, but never the model boundary.
+        let decoded = try JSONDecoder().decode(TotpEntry.self, from: JSONEncoder().encode(weak))
+        #expect(throws: TotpError.shortSecret) { try model.addEntry(decoded) }
+        #expect(throws: TotpError.shortSecret) { try model.updateEntry(decoded) }
+        #expect(model.entries == original)
+        model.copy("123456", entry: decoded)
+        #expect(model.notice == TotpError.shortSecret.localizedDescription)
+        var renamed = original[0]
+        renamed.title = "Renamed"
+        try model.updateEntry(renamed)
+        #expect(model.entries[0].title == "Renamed")
+        #expect(model.entries[0].secretBase32 == original[0].secretBase32)
+        model.lock()
     }
 
     @Test func pairedPhoneNeverRunsTheDemo() {

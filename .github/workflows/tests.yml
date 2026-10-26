@@ -1,0 +1,52 @@
+name: iOS simulator tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  simulator:
+    name: iOS tests
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Select Xcode 26
+        run: |
+          shopt -s nullglob
+          xcodes=(/Applications/Xcode_26*.app)
+          [ "${#xcodes[@]}" -gt 0 ] || { echo '::error::no Xcode 26 on this runner'; exit 1; }
+          xcode=$(printf '%s\n' "${xcodes[@]}" | sort -V | tail -1)
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+      - name: Select an available iPhone simulator
+        id: destination
+        run: |
+          set -euo pipefail
+          device=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          print(next(d["udid"] for group in devices.values() for d in group if d["name"].startswith("iPhone")))')
+          echo "id=$device" >> "$GITHUB_OUTPUT"
+      - name: Run the complete simulator test suite
+        env:
+          SIMULATOR_ID: ${{ steps.destination.outputs.id }}
+        run: >-
+          xcodebuild -project KyAuth.xcodeproj -scheme KyAuth
+          -destination "platform=iOS Simulator,id=$SIMULATOR_ID"
+          -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=NO test
+      - name: Retain test results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ios-test-results
+          path: TestResults.xcresult
+          if-no-files-found: ignore

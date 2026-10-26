@@ -202,10 +202,15 @@ final class AppModel {
     // MARK: - TOTP
 
     func addEntry(_ entry: TotpEntry) throws {
+        _ = try TotpGenerator.validatedSecret(entry.secretBase32)
         try saveEntries(entries + [entry])
     }
 
     func updateEntry(_ entry: TotpEntry) throws {
+        // Metadata edits may retain an exact legacy secret; replacements must be strong.
+        if entries.first(where: { $0.id == entry.id })?.secretBase32 != entry.secretBase32 {
+            _ = try TotpGenerator.validatedSecret(entry.secretBase32)
+        }
         try saveEntries(entries.map { $0.id == entry.id ? entry : $0 })
     }
 
@@ -227,6 +232,10 @@ final class AppModel {
 
     /// Copies a code for this device only; it expires when its period ends or when KyAuth locks.
     func copy(_ code: String, entry: TotpEntry) {
+        guard TotpGenerator.isUsableSecret(entry.secretBase32) else {
+            notice = TotpError.shortSecret.localizedDescription
+            return
+        }
         let remaining = TotpGenerator.secondsRemaining(entry, at: Int64(Date().timeIntervalSince1970))
         UIPasteboard.general.setItems(
             [[UTType.plainText.identifier: code]],

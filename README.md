@@ -21,6 +21,20 @@ Keep each site’s recovery codes elsewhere. Losing the phone or removing its pa
 make the vault unrecoverable. The demo uses fixed codes and simulated requests; it does
 not exercise a server, APNs or a real vault.
 
+## TOTP key requirements and updates
+
+New setup keys need at least **16 decoded bytes** (128 bits); RFC 4226 recommends
+20 bytes. Base32 text length alone is not the policy: spaces, case and padding do
+not add key material. Obtain a fresh setup key from the account's service when it
+is too short; do not pad, hash, repeat or replace an existing issuer's key yourself.
+
+Existing short-key entries stay in the encrypted vault with their names, notes,
+issuer and exact secret. They cannot generate or copy codes, and their rows explain
+how to set the account up again at its service. You can still edit metadata or
+delete an entry. Keep the service's recovery codes and another authorized sign-in
+method until the new setup works; deleting the old entry does not re-enrol it.
+The update keeps the vault/key format and adds no backup, export or sync.
+
 ## Install independently
 
 Requires iOS/iPadOS 17+, a device passcode, and a Mac with Xcode to build from source.
@@ -55,12 +69,15 @@ xcodebuild -project KyAuth.xcodeproj -scheme KyAuth \
 
 Simulator tests do not verify APNs delivery, Secure Enclave signing, App Attest, Face ID
 prompts, camera scanning, the notification extension’s shared Keychain group, or KyPost’s
-real sign-on round trip. Those require physical-device acceptance. CI (`.github/workflows/codeql.yml`)
-builds the app for the simulator and runs CodeQL on it; it does not run the tests. Recorded hardware
+real sign-on round trip. Those require physical-device acceptance. CI
+(`.github/workflows/tests.yml`) runs the complete simulator suite; the separate
+CodeQL workflow builds and scans the app and notification extension. Recorded hardware
 observations and exact build contracts are in [KyAuth/AGENTS.md](KyAuth/AGENTS.md).
 
-Without Xcode, `scripts/check-push-crypto-linux.sh` runs only the push cryptographic vectors
-in Docker. `scripts/capture-screenshots.sh` uses demo fixtures and is a capture workflow,
+Without Xcode, `scripts/check-push-crypto-linux.sh` runs push cryptographic vectors
+and portable TOTP import/generation/legacy-record tests in Docker against swift-crypto. It does not verify Apple CryptoKit, the encrypted
+vault/Keychain integration or SwiftUI. `scripts/capture-screenshots.sh` uses demo
+fixtures and is a capture workflow,
 not evidence of live push or security qualification. Design contracts are in `docs/specs/`.
 
 ## Security and contributing

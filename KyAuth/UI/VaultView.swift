@@ -171,16 +171,25 @@ struct TotpRow: View {
                             .font(.system(.title, design: .rounded).monospacedDigit().weight(.semibold))
                             .foregroundStyle(remaining <= 5 ? Color.red : Color.primary)
                             .contentTransition(.numericText())
+                        if code == nil {
+                            Text("Set up this account again at its service using a new key. Keep your recovery codes until it works.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     Spacer()
-                    CountdownRing(remaining: remaining, period: entry.periodSeconds)
+                    if code != nil {
+                        CountdownRing(remaining: remaining, period: entry.periodSeconds)
+                    }
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .disabled(code == nil)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(entry.title), code \(code.map { $0.map(String.init).joined(separator: " ") } ?? "unavailable"), \(remaining) seconds left")
-            .accessibilityHint("Copies the code")
+            .accessibilityLabel(code.map { "\(entry.title), code \($0.map(String.init).joined(separator: " ")), \(remaining) seconds left" }
+                ?? "\(entry.title), code unavailable. Set up this account again at its service using a new key. Keep your recovery codes until it works.")
+            .accessibilityHint(code == nil ? "" : "Copies the code")
         }
     }
 }

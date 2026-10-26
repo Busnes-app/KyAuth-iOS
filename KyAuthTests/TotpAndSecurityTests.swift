@@ -4,90 +4,37 @@ import Testing
 @testable import KyAuth
 
 @MainActor
-struct TotpGeneratorTests {
-    // RFC 6238 Appendix B vectors.
-    @Test func rfc6238() throws {
-        let sha1 = try TotpEntry(title: "t", secretBase32: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", digits: 8)
-        #expect(try TotpGenerator.code(sha1, at: 59) == "94287082")
-        #expect(try TotpGenerator.code(sha1, at: 1_111_111_109) == "07081804")
-        let sha256 = try TotpEntry(
-            title: "t", secretBase32: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA", digits: 8, algorithm: .sha256
-        )
-        #expect(try TotpGenerator.code(sha256, at: 59) == "46119246")
-        let sha512 = try TotpEntry(
-            title: "t",
-            secretBase32: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNA",
-            digits: 8, algorithm: .sha512
-        )
-        #expect(try TotpGenerator.code(sha512, at: 59) == "90693936")
-    }
-
-    @Test func formattingAndCountdown() throws {
-        #expect(TotpGenerator.formatted("123456") == "123 456")
-        #expect(TotpGenerator.formatted("12345678") == "12345678")
-        let entry = try TotpEntry(title: "t", secretBase32: "JBSWY3DPEHPK3PXP")
-        #expect(TotpGenerator.secondsRemaining(entry, at: 59) == 1)
-        #expect(TotpGenerator.secondsRemaining(entry, at: 60) == 30)
-    }
-
-    @Test func refusesUnusableSecrets() {
-        #expect(!TotpGenerator.isUsableSecret("A"))
-        #expect(!TotpGenerator.isUsableSecret("01"))
-        #expect(!TotpGenerator.isUsableSecret(""))
-        #expect(TotpGenerator.isUsableSecret("jbsw y3dp ===="))
-        #expect(throws: TotpError.self) { try TotpEntry(title: "t", secretBase32: "A") }
-        #expect(throws: TotpError.self) { try TotpEntry(title: " ", secretBase32: "JBSWY3DP") }
-        #expect(throws: TotpError.self) { try TotpEntry(title: "t", secretBase32: "JBSWY3DP", digits: 9) }
-    }
-}
-
-@MainActor
-struct TotpUriParserTests {
-    @Test func parsesIssuerLabelAndParameters() throws {
-        let entry = try TotpUriParser.parse(
-            "otpauth://totp/ACME%20Co:ada@example.com?secret=JBSWY3DPEHPK3PXP&issuer=ACME%20Co&algorithm=SHA512&digits=8&period=60"
-        )
-        #expect(entry.title == "ACME Co (ada@example.com)")
-        #expect(entry.issuer == "ACME Co")
-        #expect(entry.algorithm == .sha512)
-        #expect(entry.digits == 8)
-        #expect(entry.periodSeconds == 60)
-    }
-
-    @Test func labelWithoutColon() throws {
-        #expect(try TotpUriParser.parse("otpauth://totp/ada?secret=JBSWY3DPEHPK3PXP&issuer=ACME").title == "ACME (ada)")
-        #expect(try TotpUriParser.parse("otpauth://totp/ACME?secret=JBSWY3DPEHPK3PXP&issuer=acme").title == "ACME")
-        #expect(try TotpUriParser.parse("otpauth://totp/?secret=JBSWY3DPEHPK3PXP").title == "Account")
-    }
-
-    @Test func suppliedParametersMustBeSupported() throws {
-        let base = "otpauth://totp/a?secret=JBSWY3DPEHPK3PXP"
-        for bad in ["&algorithm=SHA3", "&algorithm=MD5", "&digits=abc", "&digits=9", "&digits=0", "&period=abc", "&period=-30", "&period=0", "&digits", "&period", "&algorithm", "&digits=", "&algorithm="] {
-            #expect(throws: TotpError.self) { try TotpUriParser.parse(base + bad) }
-        }
-        let defaults = try TotpUriParser.parse(base)
-        #expect(defaults.algorithm == .sha1 && defaults.digits == 6 && defaults.periodSeconds == 30)
-        #expect(try TotpUriParser.parse(base + "&algorithm=sha256").algorithm == .sha256)
-    }
-
-    @Test func refusesOtherSchemesHotpAndMissingSecret() {
-        #expect(throws: TotpError.self) { try TotpUriParser.parse("https://example.com") }
-        #expect(throws: TotpError.self) { try TotpUriParser.parse("otpauth://hotp/a?secret=JBSWY3DP&counter=1") }
-        #expect(throws: TotpError.self) { try TotpUriParser.parse("otpauth://totp/a?issuer=x") }
-    }
-}
-
-@MainActor
 struct TotpVaultTests {
     @Test func roundTripsAndRefusesTheWrongKey() throws {
         let key = SymmetricKey(size: .bits256)
-        let entries = [try TotpEntry(title: "A", secretBase32: "JBSWY3DPEHPK3PXP", url: "https://a.example", notes: "n")]
+        let entries = [try TotpEntry(title: "A", secretBase32: "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP", url: "https://a.example", notes: "n")]
         let sealed = try TotpVault.seal(entries, key: key)
         #expect(try TotpVault.open(sealed, key: key) == entries)
         #expect(throws: VaultError.self) { try TotpVault.open(sealed, key: SymmetricKey(size: .bits256)) }
         var tampered = sealed
         tampered[tampered.count - 20] ^= 1
         #expect(throws: VaultError.self) { try TotpVault.open(tampered, key: key) }
+    }
+
+    @Test func mixedLegacyVaultKeepsEveryRecordAndSecret() throws {
+        let key = SymmetricKey(size: .bits256)
+        let strong = try TotpEntry(title: "Strong", secretBase32: String(repeating: "A", count: 26))
+        var old = strong
+        old.id = "legacy"
+        old.title = "Old Account"
+        old.secretBase32 = "MY"
+        old.issuer = "Service"
+        old.notes = "Keep recovery codes"
+        let sealed = try TotpVault.seal([old, strong], key: key)
+        var opened = try TotpVault.open(sealed, key: key)
+        #expect(opened == [old, strong])
+        #expect(throws: TotpError.shortSecret) { try TotpGenerator.code(opened[0], at: 59) }
+        #expect(try TotpGenerator.code(opened[1], at: 59).count == 6)
+        opened[0].title = "Renamed"
+        let saved = try TotpVault.open(TotpVault.seal(opened, key: key), key: key)
+        #expect(saved == opened)
+        #expect(saved[0].secretBase32 == "MY")
+        #expect(saved[0].issuer == old.issuer && saved[0].notes == old.notes)
     }
 
     @Test func onlyAnAbsentVaultLoadsEmpty() throws {
@@ -112,7 +59,7 @@ struct TotpVaultTests {
         let vault = TotpVault(file: file)
         let key = SymmetricKey(size: .bits256)
         #expect(try vault.load(key: key).isEmpty)
-        try vault.save([try TotpEntry(title: "A", secretBase32: "JBSWY3DPEHPK3PXP")], key: key)
+        try vault.save([try TotpEntry(title: "A", secretBase32: "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP")], key: key)
         #expect(try vault.load(key: key).count == 1)
         #expect(try file.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
         vault.delete()

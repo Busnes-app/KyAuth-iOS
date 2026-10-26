@@ -57,6 +57,11 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 - TOTP vault: AES-256-GCM file excluded from backup, key in a `.userPresence`,
   `WhenPasscodeSetThisDeviceOnly` Keychain item. No backup, export or sync, by decision. A device
   without a passcode cannot use KyAuth.
+- New/imported/replaced TOTP keys require 16 decoded bytes (RFC 4226). Generation checks
+  the same floor, including Codable-restored or mutable entries. Keep legacy vault records and
+  their exact secrets readable/editable/deletable; metadata edits may retain an unchanged
+  secret. Never pad, replace or drop one silently. Short-key rows explain issuer re-enrolment,
+  hide countdowns and refuse copy/generation. No export or sync is added.
 - Keychain items are this-device-only and never synced; a fresh install erases leftovers.
 - Only an absent vault file loads as empty; an empty or unreadable file is an error and saving
   stays disabled, so a write can never replace entries that failed to load.
@@ -125,7 +130,11 @@ the camera scanner, the sign-on round trip with KyPost, the notification service
 shared Keychain group. Installed on an iPhone, and plaintext APNs delivery through the real relay
 observed there (2026-10-13); encrypted pushes and the extension are not yet observed on hardware.
 
-Without Xcode, `scripts/check-push-crypto-linux.sh` (Docker) runs `PushCryptoTests` against swift-crypto.
+CI (`.github/workflows/tests.yml`) runs the complete simulator test suite on Xcode 26.
+Without Xcode, `scripts/check-push-crypto-linux.sh` (Docker) runs `PushCryptoTests` and
+`TotpTests` against swift-crypto with a persistent SwiftPM dependency cache. It does not
+verify Apple CryptoKit, vault/Keychain integration or SwiftUI. The encrypted mixed-legacy
+vault and model-boundary tests require the simulator.
 
 App Store screenshots: `scripts/capture-screenshots.sh [iphone|ipad|duo|all]` drives the demo
 through `KyAuthUITests/ScreenshotTests` (skipped unless `KYAUTH_SCREENSHOTS=1`) into

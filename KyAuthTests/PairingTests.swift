@@ -121,7 +121,7 @@ struct QrPairingParserTests {
 /// The Codes tab scanner: setup codes add an account, pairing codes go to pairing.
 struct ScannedCodeTests {
     @Test func setupCodeAddsAnAccount() throws {
-        guard case .account(let entry) = try ScannedCode.parse("otpauth://totp/Mail:me?secret=JBSWY3DPEHPK3PXP&issuer=Mail")
+        guard case .account(let entry) = try ScannedCode.parse("otpauth://totp/Mail:me?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=Mail")
         else { Issue.record("expected an account"); return }
         #expect(entry.issuer == "Mail")
     }
@@ -140,7 +140,7 @@ struct ScannedCodeTests {
         let expired = #"{"type":"kyidentity_device_pairing","serverUrl":"https://id.example.com","pairingToken":"t","expiresAt":1}"#
         #expect(throws: PairingError.self) { try ScannedCode.parse(expired) }
         #expect(throws: TotpError.self) { try ScannedCode.parse("https://example.com") }
-        #expect(throws: TotpError.self) { try ScannedCode.parse("otpauth://hotp/x?secret=JBSWY3DPEHPK3PXP") }
+        #expect(throws: TotpError.self) { try ScannedCode.parse("otpauth://hotp/x?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP") }
     }
 }
 

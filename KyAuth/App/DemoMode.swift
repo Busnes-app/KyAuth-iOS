@@ -11,9 +11,9 @@ enum DemoMode {
 
     static func entries() -> [TotpEntry] {
         [
-            try! TotpEntry(title: "Example Mail", secretBase32: "JBSWY3DPEHPK3PXP", url: "https://mail.example.com", id: "demo-mail"),
-            try! TotpEntry(title: "Example Cloud", secretBase32: "KRSXG5CTMVRXEZLU", url: "https://cloud.example.com", id: "demo-cloud"),
-            try! TotpEntry(title: "Example Bank", secretBase32: "GEZDGNBVGY3TQOJQ", notes: "Demo account", id: "demo-bank"),
+            try! TotpEntry(title: "Example Mail", secretBase32: "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP", url: "https://mail.example.com", id: "demo-mail"),
+            try! TotpEntry(title: "Example Cloud", secretBase32: "KRSXG5CTMVRXEZLUKRSXG5CTMVRXEZLU", url: "https://cloud.example.com", id: "demo-cloud"),
+            try! TotpEntry(title: "Example Bank", secretBase32: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", notes: "Demo account", id: "demo-bank"),
         ]
     }
 

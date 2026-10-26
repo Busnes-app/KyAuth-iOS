@@ -231,6 +231,8 @@ When the user requests a durable behavior change, record it here or in the relev
 
 ## Verification
 
+- `.github/workflows/tests.yml` runs the complete iOS simulator suite on pushes and pull requests; CodeQL separately builds/scans the app and extension. Product-specific TOTP/vault contracts and local checks live in `KyAuth/AGENTS.md`.
+
 - Scorecard (`.github/workflows/scorecard.yml`) publishes public supply-chain security results on default-branch pushes, weekly and after branch-protection changes. Keep publishing restricted to the default branch, action pins immutable, checkout credentials disabled and OIDC/code-scanning writes scoped to the analysis job. README’s live Scorecard badge needs a successful published run.
 
 ## Child DOX Index
