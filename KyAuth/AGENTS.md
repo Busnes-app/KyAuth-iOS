@@ -143,6 +143,11 @@ shared Keychain group. Installed on an iPhone, and plaintext APNs delivery throu
 observed there (2026-10-13); encrypted pushes and the extension are not yet observed on hardware.
 
 CI (`.github/workflows/tests.yml`) runs the complete simulator test suite on Xcode 26.
+Debug and Release inherit warnings-as-errors; CI is configured to build Release
+for the app and extension (test targets compile in Debug). Coverage and Release
+additions await native CI evidence. The fixture runner validates app line counts
+and reports absent or unexercised extension code separately; see root Verification
+for artifact status and the remaining strict-warning limitation.
 The fixture runner needs Go 1.26.10 and a host mapping of
 `127.0.0.1 kyauth-tls-test.invalid`; it imports only generated fixture anchors
 into the selected disposable simulator. See `scripts/tls-fixtures/README.md`.

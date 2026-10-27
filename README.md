@@ -78,7 +78,12 @@ Simulator tests do not verify APNs delivery, Secure Enclave signing, App Attest,
 prompts, camera scanning, the notification extension’s shared Keychain group, or KyPost’s
 real sign-on round trip. Those require physical-device acceptance. CI
 (`.github/workflows/tests.yml`) runs the complete simulator suite; the separate
-CodeQL workflow builds and scans the app and notification extension. Recorded hardware
+CodeQL workflow builds and scans the app and notification extension. Swift warnings
+are configured as build errors in Debug and Release, including CodeQL. CI is
+configured to build Release and retain validated app line counts in `coverage.json`
+after successful tests and evidence export. These additions await native CI evidence.
+Absent or unexercised extension coverage is reported separately. Line counts do
+not establish branch, input or requirement coverage. Recorded hardware
 observations and exact build contracts are in [KyAuth/AGENTS.md](KyAuth/AGENTS.md).
 
 Without Xcode, `scripts/check-push-crypto-linux.sh` runs push cryptographic vectors
