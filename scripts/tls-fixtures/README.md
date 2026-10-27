@@ -37,7 +37,11 @@ local hosts file or touches a physical device. Erase the disposable simulator
 when done to remove its test anchors. CI uses an ephemeral macOS runner.
 
 Results: `.tls-fixtures/results-*/TestResults.xcresult`, with public post-suite
-counters in `fixture-stats.json` and the console. Fixture startup output stays
+counters in `fixture-stats.json` and the console. `test-summary.json` retains
+assertion messages and native error codes from xcresult. Ordinary URLSession
+P-256/P-384/P-521 controls use no delegate or trust override to distinguish
+platform negotiation from the application's added key policy. They remain
+required successes; no failed strong control is skipped. Fixture startup output stays
 in `.tls-fixtures/server.log`. CI explicitly includes hidden paths when
 uploading only the results directories; generated keys are outside that upload.
 No request body/header or real credential is logged. A failed test run still

@@ -47,6 +47,26 @@ struct TLSKeyPolicyTests {
         print("KYAUTH_TLS_ATTRIBUTES actualRSA=2047 blockBytes=\(SecKeyGetBlockSize(key))")
     }
 
+    @Test func ordinaryNativeStrongCurveControls() async throws {
+        // No delegate, trust override or application key policy: distinguish a
+        // native TLS negotiation failure from the added all-chain key check.
+        let session = URLSession(configuration: .ephemeral)
+        defer { session.invalidateAndCancel() }
+        let response = try await HTTPClient.shared.send("GET", url(46100, "/cases"), body: nil)
+        let cases = try JSONDecoder().decode([TLSFixtureCase].self, from: response.body)
+        for name in ["p256", "p384", "p521"] {
+            let item = try #require(cases.first { $0.name == name })
+            do {
+                let (_, response) = try await session.data(from: url(item.port, "/native-curve-control"))
+                #expect((response as? HTTPURLResponse)?.statusCode == 200,
+                        "Ordinary URLSession strong-curve control: \(name)")
+            } catch {
+                let native = error as NSError
+                Issue.record("Ordinary URLSession refused \(name): \(native.domain) code=\(native.code)")
+            }
+        }
+    }
+
     @Test func chainFloorsNativeTrustVersionsAndRedirectRefusal() async throws {
         print("KYAUTH_TLS_PLATFORM \(ProcessInfo.processInfo.operatingSystemVersionString)")
         let response = try await HTTPClient.shared.send("GET", url(46100, "/cases"), body: nil)

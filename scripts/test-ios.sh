@@ -64,4 +64,11 @@ echo 'KYAUTH_TLS_FIXTURE_STATS (public fixture counters, after native tests)'
 curl --silent --show-error --fail --noproxy kyauth-tls-test.invalid \
   --cacert .tls-fixtures/certificates/root.pem https://kyauth-tls-test.invalid:46100/stats \
   | tee "$fixture_results/fixture-stats.json"
+# Preserve assertion messages and native error codes even when Xcode hides
+# Swift Testing stdout. These contain only disposable fixture observations.
+xcrun xcresulttool get test-results summary --path "$fixture_results/TestResults.xcresult" \
+  > "$fixture_results/test-summary.json" || :
+if [ -s "$fixture_results/test-summary.json" ]; then
+  cat "$fixture_results/test-summary.json"
+fi
 exit "$fixture_test_status"
