@@ -3,6 +3,7 @@ package main
 import (
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
@@ -130,6 +131,29 @@ func generateFixtures(directory string) error {
 			return err
 		}
 		if err := writePEM(filepath.Join(directory, name+"-key.pem"), "PRIVATE KEY", private); err != nil {
+			return err
+		}
+	}
+	return generateCertificateOnly(directory, root, rootKey, now)
+}
+
+// Certificates served for inspection only. They get no listener and no private
+// key: the client key policy must refuse a key type it cannot measure, which
+// does not depend on whether the platform ever negotiates that type.
+func generateCertificateOnly(directory string, root *x509.Certificate, rootKey crypto.Signer, now time.Time) error {
+	for index, name := range certificateOnlyNames {
+		public, _, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			return err
+		}
+		leaf := &x509.Certificate{SerialNumber: big.NewInt(int64(index + 90)), Subject: pkix.Name{CommonName: fixtureHost},
+			DNSNames: []string{fixtureHost}, NotBefore: now.Add(-time.Hour), NotAfter: now.Add(7 * 24 * time.Hour),
+			BasicConstraintsValid: true, KeyUsage: x509.KeyUsageDigitalSignature, ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}}
+		der, err := x509.CreateCertificate(rand.Reader, leaf, root, public, rootKey)
+		if err != nil {
+			return err
+		}
+		if err := writePEM(filepath.Join(directory, name+"-cert.pem"), "CERTIFICATE", der); err != nil {
 			return err
 		}
 	}

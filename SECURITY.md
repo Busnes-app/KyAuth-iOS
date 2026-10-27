@@ -21,8 +21,17 @@ and disclosure.
 - Fetch sign-in requests over HTTPS from the configured KyIdentity only; refuse redirects to other hosts.
 - Keep native certificate name, validity and trust validation. Every certificate in
   the evaluated chain, including its anchor, must have an actual RSA key of at
-  least 2048 bits or prime-curve EC key of at least 256 bits; unknown/missing
-  key metadata is refused. No trust bypass or weak-key opt-out is provided.
+  least 2048 bits or prime-curve EC key of at least 256 bits. No trust bypass or
+  weak-key opt-out is provided.
+- Those two key types are an allowlist, and the check fails closed: a key the app
+  cannot read, a certificate reporting no key size, or any other key type —
+  Ed25519 included — is refused rather than assumed strong. Issue KyIdentity
+  server certificates with RSA or a NIST prime curve.
+- Meeting the floor does not make a certificate negotiable: iOS can refuse a
+  strong one during the handshake, before the app sees it. On the tested
+  simulator a P-521 peer was refused that way, by an ordinary URLSession as well
+  as by KyAuth ([evidence](docs/native-tls-evidence.md)). Prefer P-256 or P-384,
+  and verify a new chain against the app rather than against the floor alone.
 - If an existing server uses an undersized certificate or CA, retain working
   administrator access and arrange a verified strong certificate/chain before
   upgrading it. Preserve pairing, device keys and vault data; resetting them

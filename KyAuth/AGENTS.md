@@ -46,9 +46,15 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 - Release builds require HTTPS; debug builds also accept loopback HTTP.
 - HTTPS retains the challenge’s normal SSL/hostname/time/anchor evaluation, then
   checks every evaluated certificate including its anchor: actual RSA at least
-  2048 bits or prime EC at least 256 bits. Missing/unknown key metadata refuses
-  the challenge. Never use rounded RSA block bytes, replace trust policies/roots,
-  add an insecure override or follow a redirect to recover from refusal.
+  2048 bits or prime EC at least 256 bits. Those types are an allowlist and
+  `TransportPolicy.hasStrongKey` fails closed — an unreadable key, an absent key
+  size or any other key type refuses the challenge. Never use rounded RSA block
+  bytes, replace trust policies/roots, add an insecure override or follow a
+  redirect to recover from refusal.
+- Keep that decision per certificate so it stays testable without TLS: the
+  platform can refuse a strong peer during the handshake, which is a native
+  refusal and not an application verdict. Observed and scoped in
+  `docs/native-tls-evidence.md`; never widen it into a claim about Apple TLS.
 - `PrivacyInfo.xcprivacy` declares every required-reason API the app uses (now `UserDefaults`
   CA92.1, `systemUptime` 35F9.1, file timestamps C617.1) and no tracking. Collected data: Device ID
   and User ID, app functionality, linked to the user (they are part of signing in), because the
@@ -141,7 +147,10 @@ The fixture runner needs Go 1.26.10 and a host mapping of
 `127.0.0.1 kyauth-tls-test.invalid`; it imports only generated fixture anchors
 into the selected disposable simulator. See `scripts/tls-fixtures/README.md`.
 TLSKeyPolicyTests requires zero application bytes on refused weak/key/trust/
-protocol cases; strong peer and directly trusted-peer controls must succeed.
+protocol cases; strong peer and directly trusted-peer controls must succeed. A
+delegate-free URLSession runs the same strong-curve peers, so a native
+negotiation failure is told apart from the application floor and recorded in
+`docs/native-tls-evidence.md` with its run; neither is skipped or excused.
 Without Xcode, `scripts/check-push-crypto-linux.sh` (Docker) runs `PushCryptoTests` and
 `TotpTests` against swift-crypto with a persistent SwiftPM dependency cache. It does not
 verify Apple CryptoKit, vault/Keychain integration or SwiftUI. The encrypted mixed-legacy

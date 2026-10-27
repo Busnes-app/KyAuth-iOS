@@ -8,7 +8,8 @@ RSA-2047 and sent application bytes; a green baseline was not a repair.
 
 The standard-library Go server generates a shared RSA-3072 CA, seven-day peers,
 weak RSA-1024/2047 at leaf/intermediate/root, directly trusted self-signed peers,
-and strong RSA-2048/P-256/P-384/P-521 controls. Authority keys are discarded;
+strong RSA-2048/P-256/P-384/P-521 peers, and one listener-less Ed25519
+certificate served only for key-policy inspection. Authority keys are discarded;
 server private keys are public disposable test material. Generated keys/results
 stay ignored under `.tls-fixtures/`, outside app and test bundles. Issuer roots
 are omitted from wire chains; the client must build them from its trust store.
@@ -40,8 +41,10 @@ Results: `.tls-fixtures/results-*/TestResults.xcresult`, with public post-suite
 counters in `fixture-stats.json` and the console. `test-summary.json` retains
 assertion messages and native error codes from xcresult. Ordinary URLSession
 P-256/P-384/P-521 controls use no delegate or trust override to distinguish
-platform negotiation from the application's added key policy. They remain
-required successes; no failed strong control is skipped. Fixture startup output stays
+platform negotiation from the application's added key policy. P-256 and P-384 are
+required successes; P-521's observed native refusal is asserted, with its error
+domain/code recorded. No outcome is skipped and no refusal is excused.
+Fixture startup output stays
 in `.tls-fixtures/server.log`. CI explicitly includes hidden paths when
 uploading only the results directories; generated keys are outside that upload.
 No request body/header or real credential is logged. A failed test run still
@@ -51,10 +54,19 @@ captures counters and retains its failing exit status.
 
 - Security.framework must report literal RSA-2047 bits; rounded block size is
   logged separately and cannot implement the minimum.
-- Twenty cases cover weak RSA at all chain positions/direct trust, seven strong
+- Twenty cases cover weak RSA at all chain positions/direct trust, six strong
   controls, expired/wrong-host/untrusted peers, TLS1.0/1.1 refusal and TLS1.2/1.3
   success. Every case must reach its TCP listener. Strong controls succeed;
   rejected cases must receive zero application bytes and zero HTTP requests.
+- The P-521 peer is the fourteenth refusal, not a strong control: this simulator
+  refuses it during the handshake, and so does the delegate-free URLSession.
+  Both clients must receive zero HTTP, and the control fails if an ordinary
+  URLSession ever negotiates it. Scope and runs: `docs/native-tls-evidence.md`.
+- `/certificate/<name>` serves leaves for key-policy inspection, including the
+  listener-less `ed25519` material. The native suite drives
+  `TransportPolicy.hasStrongKey` with them: RSA-2047 and Ed25519 refused,
+  RSA-2048/P-256/P-384/P-521 accepted. That is how the floor and its fail-closed
+  key-type allowlist stay provable for keys TLS never negotiates here.
 - `KYAUTH_TLS_POLICY` and the retained counters report those observations.
   `KYAUTH_TLS_REUSE` reports repeated requests and actual connection count;
   pooling is claimed only when observed. Redirect302 must reach the caller

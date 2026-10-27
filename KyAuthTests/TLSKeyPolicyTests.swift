@@ -23,6 +23,12 @@ private struct TLSFixtureCertificate: Decodable {
 struct TLSKeyPolicyTests {
     private let host = "kyauth-tls-test.invalid"
 
+    /// Curves whose fixture peer this simulator's TLS stack does not negotiate,
+    /// observed through the no-delegate control below: an ordinary URLSession
+    /// is refused the same way, so the refusal is not the application's key
+    /// policy, whose own decision on these keys is checked separately.
+    private static let nativelyRefused: Set<String> = ["p521"]
+
     private func url(_ port: Int, _ path: String) -> URL {
         URL(string: "https://\(host):\(port)\(path)")!
     }
@@ -34,17 +40,42 @@ struct TLSKeyPolicyTests {
         return try #require(values[name])
     }
 
-    @Test func nativeRSAAttributesUseActualModulusBits() async throws {
-        let response = try await HTTPClient.shared.send("GET", url(46100, "/certificate/rsa2047"), body: nil)
+    private func certificate(_ name: String) async throws -> SecCertificate {
+        let response = try await HTTPClient.shared.send("GET", url(46100, "/certificate/\(name)"), body: nil)
         try #require(response.status == 200)
         let fixture = try JSONDecoder().decode(TLSFixtureCertificate.self, from: response.body)
         let data = try #require(Data(base64Encoded: fixture.certificate))
-        let certificate = try #require(SecCertificateCreateWithData(nil, data as CFData))
-        let key = try #require(SecCertificateCopyKey(certificate))
+        return try #require(SecCertificateCreateWithData(nil, data as CFData))
+    }
+
+    private func describeKey(_ certificate: SecCertificate) -> String {
+        guard let key = SecCertificateCopyKey(certificate) else { return "key=unavailable" }
+        let attributes = SecKeyCopyAttributes(key) as? [String: Any] ?? [:]
+        let kind = attributes[kSecAttrKeyType as String] as? String ?? "unreported"
+        let bits = attributes[kSecAttrKeySizeInBits as String] as? Int
+        return "keyType=\(kind) bits=\(bits.map { String($0) } ?? "unreported") blockBytes=\(SecKeyGetBlockSize(key))"
+    }
+
+    @Test func nativeKeyAttributesDecideTheChainFloor() async throws {
+        // Decided per certificate, so the floor is provable for a key type the
+        // platform may never negotiate: a P-521 key satisfies it, and a key
+        // this app cannot measure is refused rather than assumed strong.
+        let expected: [(name: String, strong: Bool)] = [
+            ("rsa2047", false), ("rsa2048", true), ("p256", true),
+            ("p384", true), ("p521", true), ("ed25519", false),
+        ]
+        for item in expected {
+            let leaf = try await certificate(item.name)
+            print("KYAUTH_TLS_KEY case=\(item.name) strong=\(item.strong) \(describeKey(leaf))")
+            #expect(TransportPolicy.hasStrongKey(leaf) == item.strong, "key floor: \(item.name)")
+        }
+        // Literal bits, never the rounded RSA block size, implement the minimum.
+        let undersized = try await certificate("rsa2047")
+        let key = try #require(SecCertificateCopyKey(undersized))
         let attributes = try #require(SecKeyCopyAttributes(key) as? [String: Any])
         #expect(attributes[kSecAttrKeyType as String] as? String == kSecAttrKeyTypeRSA as String)
         #expect(attributes[kSecAttrKeySizeInBits as String] as? Int == 2047)
-        print("KYAUTH_TLS_ATTRIBUTES actualRSA=2047 blockBytes=\(SecKeyGetBlockSize(key))")
+        #expect(SecKeyGetBlockSize(key) == 256)
     }
 
     @Test func ordinaryNativeStrongCurveControls() async throws {
@@ -56,13 +87,30 @@ struct TLSKeyPolicyTests {
         let cases = try JSONDecoder().decode([TLSFixtureCase].self, from: response.body)
         for name in ["p256", "p384", "p521"] {
             let item = try #require(cases.first { $0.name == name })
+            let before = try await stats(name)
+            var accepted = false
+            var refusal = "none"
             do {
                 let (_, response) = try await session.data(from: url(item.port, "/native-curve-control"))
-                #expect((response as? HTTPURLResponse)?.statusCode == 200,
-                        "Ordinary URLSession strong-curve control: \(name)")
+                accepted = (response as? HTTPURLResponse)?.statusCode == 200
             } catch {
                 let native = error as NSError
-                Issue.record("Ordinary URLSession refused \(name): \(native.domain) code=\(native.code)")
+                refusal = "\(native.domain) code=\(native.code)"
+            }
+            let after = try await stats(name)
+            print("KYAUTH_TLS_ORDINARY case=\(name) accepted=\(accepted) refusal=\(refusal) applicationBytes=\(after.bytes - before.bytes)")
+            #expect(after.connections > before.connections)
+            if Self.nativelyRefused.contains(name) {
+                // Recorded, not excused: a client with no key policy gets no
+                // session either, so the platform refused it, and the peer must
+                // still receive nothing.
+                #expect(!accepted, "ordinary URLSession negotiated \(name); the application key policy would then be the only refusal")
+                #expect(after.bytes == before.bytes)
+                #expect(after.requests == before.requests)
+            } else {
+                #expect(accepted, "ordinary URLSession strong-curve control: \(name) \(refusal)")
+                #expect(after.bytes > before.bytes)
+                #expect(after.requests == before.requests + 1)
             }
         }
     }
@@ -79,7 +127,7 @@ struct TLSKeyPolicyTests {
             "tls10", "tls11", "tls12", "tls13",
         ]
         try #require(cases.count == expected.count && Set(cases.map(\.name)) == expected)
-        let strong: Set<String> = ["rsa2048", "p256", "p384", "p521", "trusted2048", "tls12", "tls13"]
+        let strong: Set<String> = ["rsa2048", "p256", "p384", "trusted2048", "tls12", "tls13"]
         for item in cases {
             let name = item.name
             let port = item.port
@@ -95,13 +143,17 @@ struct TLSKeyPolicyTests {
             let after = try await stats(name)
             try #require(after.bytes >= before.bytes)
             let bytes = after.bytes - before.bytes
-            print("KYAUTH_TLS_POLICY case=\(name) accepted=\(accepted) applicationBytes=\(bytes)")
+            let classification = strong.contains(name) ? "strong"
+                : (Self.nativelyRefused.contains(name) ? "native-refusal" : "refused")
+            print("KYAUTH_TLS_POLICY case=\(name) expected=\(classification) accepted=\(accepted) applicationBytes=\(bytes)")
             #expect(after.connections > before.connections)
             if strong.contains(name) {
                 #expect(accepted)
                 #expect(bytes > 0)
                 #expect(after.requests == before.requests + 1)
             } else {
+                // Weak keys, invalid trust, refused protocol versions and a peer
+                // the platform will not negotiate all end the same way.
                 #expect(!accepted)
                 #expect(bytes == 0)
                 #expect(after.requests == before.requests)

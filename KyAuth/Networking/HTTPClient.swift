@@ -71,7 +71,20 @@ final class HTTPClient: Sendable {
     }
 }
 
-private final class TransportPolicy: NSObject, URLSessionTaskDelegate, Sendable {
+final class TransportPolicy: NSObject, URLSessionTaskDelegate, Sendable {
+    /// An evaluated certificate's key must be one this app can measure and
+    /// strong at its actual size. Anything else — an unreadable key, absent
+    /// attributes, or a key type outside this list — is refused.
+    static func hasStrongKey(_ certificate: SecCertificate) -> Bool {
+        guard let key = SecCertificateCopyKey(certificate),
+              let attributes = SecKeyCopyAttributes(key) as? [String: Any],
+              let kind = attributes[kSecAttrKeyType as String] as? String,
+              let bits = attributes[kSecAttrKeySizeInBits as String] as? Int else { return false }
+        // RSA block size rounds 2047 bits to 256 bytes; use actual key bits.
+        return (kind == kSecAttrKeyTypeRSA as String && bits >= 2048)
+            || (kind == kSecAttrKeyTypeECSECPrimeRandom as String && bits >= 256)
+    }
+
     func urlSession(
         _ session: URLSession,
         didReceive challenge: URLAuthenticationChallenge
@@ -85,18 +98,7 @@ private final class TransportPolicy: NSObject, URLSessionTaskDelegate, Sendable 
               let chain = SecTrustCopyCertificateChain(trust) as? [SecCertificate],
               !chain.isEmpty else { return (.cancelAuthenticationChallenge, nil) }
 
-        for certificate in chain {
-            guard let key = SecCertificateCopyKey(certificate),
-                  let attributes = SecKeyCopyAttributes(key) as? [String: Any],
-                  let kind = attributes[kSecAttrKeyType as String] as? String,
-                  let bits = attributes[kSecAttrKeySizeInBits as String] as? Int else {
-                return (.cancelAuthenticationChallenge, nil)
-            }
-            // RSA block size rounds 2047 bits to 256 bytes; use actual key bits.
-            let strong = (kind == kSecAttrKeyTypeRSA as String && bits >= 2048)
-                || (kind == kSecAttrKeyTypeECSECPrimeRandom as String && bits >= 256)
-            guard strong else { return (.cancelAuthenticationChallenge, nil) }
-        }
+        guard chain.allSatisfy(Self.hasStrongKey) else { return (.cancelAuthenticationChallenge, nil) }
         return (.useCredential, URLCredential(trust: trust))
     }
 

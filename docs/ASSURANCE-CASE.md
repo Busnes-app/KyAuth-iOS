@@ -150,22 +150,45 @@ do not establish native TLS peer-key restrictions or physical-device acceptance.
 
 ### Native TLS key floor
 
-The unchanged real HTTPClient sent application bytes to a normally trusted literal
-RSA-2047 peer on the simulator. Apple’s rounded key block size was therefore not
+The unchanged real HTTPClient sent 310 application bytes to a normally trusted
+literal RSA-2047 peer on the simulator ([measured run](native-tls-evidence.md)).
+Apple’s rounded key block size was therefore not
 a sufficient minimum. The session’s TransportPolicy now first requires ordinary
 SecTrust SSL/name/time/anchor evaluation, then inspects SecKeyCopyAttributes for
-every certificate in the evaluated chain. It accepts RSA>=2048 and prime EC>=256;
-missing/unknown information fails closed. It sets no new policies/anchors/trust
+every certificate in the evaluated chain. It accepts RSA>=2048 and prime EC>=256.
+It sets no new policies/anchors/trust
 exceptions and retains redirect refusal. Strong operator-installed private CAs
 remain subject to that same validation and floor. Existing vault/pairing/device
 keys and encrypted records are not migrated or discarded.
 
+The two accepted key types are an allowlist, so the check fails closed: an
+unreadable key, an absent key size, or any other key type is refused instead of
+assumed strong. `nativeKeyAttributesDecideTheChainFloor` proves that per
+certificate, driving `TransportPolicy.hasStrongKey` with real fixture
+certificates — RSA-2047 and an Ed25519 leaf refused, RSA-2048, P-256, P-384 and
+P-521 accepted. Deciding per certificate keeps the floor provable for a key type
+the platform may never negotiate.
+
 TLSKeyPolicyTests exercises the real shared transport with loopback peers, no
 URLProtocol mock or client trust override. Host calibration checks literal weak
 leaf/intermediate/root and directly trusted keys, omitted wire roots, strong
-RSA/P-256/P-384/P-521, trust failures and exact TLS versions. Native cases require
-successful strong controls and zero application bytes on refusal; repeated
-requests and redirect refusal are checked separately. The full native suite is
-the runtime verification gate. Go fixture success alone is not Apple execution,
-and a successful local/simulator fixture does not certify a deployment or every
-supported OS/hardware version. Test setup/retained results: scripts/tls-fixtures/README.md.
+RSA/P-256/P-384/P-521, trust failures and exact TLS versions. Of the twenty
+native peers, six must succeed and fourteen must be refused with zero
+application bytes; repeated requests and redirect refusal are checked
+separately. The full native suite is the runtime verification gate. Go fixture
+success alone is not Apple execution, and a successful local/simulator fixture
+does not certify a deployment or every supported OS/hardware version.
+Test setup/retained results: scripts/tls-fixtures/README.md.
+
+One of those fourteen is a native refusal rather than a policy refusal. The
+tested simulator does not negotiate the P-521 peer at all: a delegate-free
+ordinary URLSession is refused it too, with `NSURLErrorSecureConnectionFailed`,
+while the application policy accepts the same P-521 key and Go calibration
+completes an HTTPS round trip against the same fixture. The suite therefore
+requires both clients to receive zero HTTP bytes, and the control fails if an
+ordinary URLSession ever does negotiate that peer, since the key policy would
+then be the only refusal. This is scoped to the simulator, OS build and
+certificate configuration measured in
+[native TLS evidence](native-tls-evidence.md); it is not a claim that Apple TLS
+lacks P-521, and the cause is not isolated to a cipher suite or signature
+algorithm.

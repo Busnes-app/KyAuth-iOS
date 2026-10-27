@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"flag"
 	"fmt"
@@ -30,6 +31,11 @@ var fixtureNames = []string{
 	"trusted1024", "trusted2047", "trusted2048", "wronghost", "expired", "untrusted",
 	"tls10", "tls11", "tls12", "tls13",
 }
+
+// Served by /certificate/ for key-policy inspection, with no listener: the
+// client must refuse a key type it cannot measure whether or not the platform
+// negotiates one.
+var certificateOnlyNames = []string{"ed25519"}
 
 type counters struct {
 	bytes       atomic.Uint64
@@ -71,6 +77,15 @@ type fixture struct {
 }
 
 func loadFixtures(directory string, basePort int) (map[string]*fixture, error) {
+	// Read before binding anything, so a missing file needs no listener cleanup.
+	inspectable := make(map[string][]byte, len(certificateOnlyNames))
+	for _, name := range certificateOnlyNames {
+		der, err := loadLeaf(filepath.Join(directory, name+"-cert.pem"))
+		if err != nil {
+			return nil, err
+		}
+		inspectable[name] = der
+	}
 	fixtures := make(map[string]*fixture)
 	defer func() {
 		// A partial bind must not leave earlier listeners behind.
@@ -140,12 +155,16 @@ func loadFixtures(directory string, basePort int) (map[string]*fixture, error) {
 				}
 				result = stats
 			case strings.HasPrefix(r.URL.Path, "/certificate/"):
-				peer, ok := fixtures[strings.TrimPrefix(r.URL.Path, "/certificate/")]
+				name := strings.TrimPrefix(r.URL.Path, "/certificate/")
+				leaf, ok := inspectable[name]
+				if peer, isPeer := fixtures[name]; isPeer {
+					leaf, ok = peer.leaf, true
+				}
 				if !ok {
 					http.NotFound(w, r)
 					return
 				}
-				result = map[string]string{"certificate": base64.StdEncoding.EncodeToString(peer.leaf)}
+				result = map[string]string{"certificate": base64.StdEncoding.EncodeToString(leaf)}
 			case r.URL.Path == "/redirect":
 				port := fixtures["rsa2048"].listener.Addr().(*net.TCPAddr).Port
 				w.Header().Set("Location", "https://"+net.JoinHostPort(fixtureHost, strconv.Itoa(port))+"/redirect-target")
@@ -157,6 +176,18 @@ func loadFixtures(directory string, basePort int) (map[string]*fixture, error) {
 		})
 	}
 	return fixtures, nil
+}
+
+func loadLeaf(path string) ([]byte, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	block, _ := pem.Decode(data)
+	if block == nil || block.Type != "CERTIFICATE" {
+		return nil, fmt.Errorf("%s is not a certificate", path)
+	}
+	return block.Bytes, nil
 }
 
 func run(directory string, basePort int) error {

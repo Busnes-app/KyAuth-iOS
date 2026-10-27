@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
@@ -12,8 +13,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 func startTestFixtures(t *testing.T) (map[string]*fixture, *x509.CertPool) {
@@ -136,6 +139,39 @@ func TestFixtureCalibrationAndConnectionReuse(t *testing.T) {
 			}
 			if f.counts.bytes.Load() == 0 || f.counts.requests.Load() != 2 || f.counts.connections.Load() != 1 {
 				t.Fatalf("fixture accounting/reuse failed: bytes=%d requests=%d connections=%d", f.counts.bytes.Load(), f.counts.requests.Load(), f.counts.connections.Load())
+			}
+		})
+	}
+}
+
+// The unsupported-key-type material is a real certificate with no listener and
+// no private key. The native suite checks that the client refuses its key.
+func TestCertificateOnlyMaterialIsUnsupportedKeyType(t *testing.T) {
+	dir := t.TempDir()
+	if err := generateFixtures(dir); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range certificateOnlyNames {
+		t.Run(name, func(t *testing.T) {
+			der, err := loadLeaf(filepath.Join(dir, name+"-cert.pem"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			certificate, err := x509.ParseCertificate(der)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, ok := certificate.PublicKey.(ed25519.PublicKey); !ok {
+				t.Fatalf("%s must carry an Ed25519 key, got %T", name, certificate.PublicKey)
+			}
+			if certificate.DNSNames[0] != fixtureHost || certificate.NotAfter.Before(time.Now()) {
+				t.Fatal("inspection certificate must otherwise be valid", name)
+			}
+			if _, err := os.Stat(filepath.Join(dir, name+"-key.pem")); !os.IsNotExist(err) {
+				t.Fatal("inspection material must have no private key", name)
+			}
+			if slices.Contains(fixtureNames, name) {
+				t.Fatal("inspection material must have no TLS listener", name)
 			}
 		})
 	}
