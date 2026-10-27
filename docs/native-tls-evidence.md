@@ -9,7 +9,7 @@ Each row is a counter from the fixture server the run actually talked to:
 `bytes` are plaintext application bytes after TLS, `requests` are HTTP requests
 the peer served, `connections` are accepted TCP connections.
 
-All three runs are `iOS simulator tests` on `Busnes-app/KyAuth-iOS`, on a
+These runs are `iOS simulator tests` on `Busnes-app/KyAuth-iOS`, on a
 GitHub-hosted ephemeral macOS runner: iPhone 17 Pro simulator, iOS 26.4.1
 (build 23E254a), arm64, built with macOS 26.6.2, Xcode 26, Go 1.26.10.
 
@@ -79,26 +79,32 @@ requests. No strong control is skipped, and no refusal is excused: if an ordinar
 URLSession ever does negotiate this peer, the control fails, because the key
 policy would then be the only thing refusing it.
 
-## Asserted, not yet observed
+## 4. The repaired native assertions pass
 
-The reclassification above is written into the suite but has not run on a hosted
-runner yet. These expectations are unproven until a run at or after the commit
-that added them reports them, and this section must be replaced with its run
-link and counters once it does:
+[Run 40434935123](https://github.com/Busnes-app/KyAuth-iOS/actions/runs/40434935123),
+commit `c24c899`, success: 89 passed, 1 skipped, 0 failed. The device summary
+confirms iPhone 17 Pro, iOS 26.4.1 (23E254a), arm64 simulator.
 
-- `p521` is required to be refused with zero HTTP bytes and zero requests by
-  both the production client and the delegate-free control, which is what runs 2
-  and 3 measured.
-- `nativeKeyAttributesDecideTheChainFloor` drives `TransportPolicy.hasStrongKey`
-  on fixture leaves and requires RSA-2048, P-256, P-384 and P-521 accepted,
-  RSA-2047 and Ed25519 refused. P-521 accepted here is the assertion that places
-  the refusal in the handshake rather than in the application; if Security
-  .framework does not report a measurable 521-bit EC key, that is a finding
-  about this conclusion and not a reason to relax the floor.
+`ordinaryNativeStrongCurveControls` and
+`nativeKeyAttributesDecideTheChainFloor` both pass. The direct certificate test
+accepts RSA-2048, P-256, P-384 and P-521 and refuses RSA-2047 and Ed25519,
+separately from TLS negotiation. Thus the measurable P-521 key meets the
+application floor even though this fixture's native handshake is refused.
 
-Locally verified instead, without an Apple SDK: the Ed25519 and P-521 fixture
-certificates are generated, served by `/certificate/`, and parse as an Ed25519
-leaf and a 521-bit EC leaf for the host `kyauth-tls-test.invalid`.
+| Peer | bytes | requests | connections |
+| --- | --- | --- | --- |
+| `p256` | 550 | 2 | 2 |
+| `p384` | 550 | 2 | 2 |
+| `p521` | 0 | 0 | 2 |
+| `rsa2048` | 620 | 2 | 1 |
+| `tls12` | 310 | 1 | 1 |
+| `tls13` | 310 | 1 | 1 |
+
+Every weak RSA leaf, intermediate, root and direct-trust peer, plus expired,
+wrong-host, untrusted and TLS 1.0/1.1 peers, records 0 bytes and 0 requests.
+The current suite therefore confirms the reclassification without dropping the
+P-521 fixture, bypassing native trust or weakening the key floor. Platform scope
+remains the simulator, OS build and certificate configuration described above.
 
 ## What these runs do not establish
 
