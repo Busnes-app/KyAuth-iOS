@@ -1,6 +1,6 @@
 # Contributing to KyAuth for iOS
 
-KyAuth is the KyIdentity authenticator for iPhone and iPad: TOTP codes, Push MFA approvals, KyIdentity sign-on, and passkeys. Contributions must keep authenticator secrets on the device and keep every sign-in approval behind an explicit human action.
+KyAuth is the KyIdentity authenticator for iPhone and iPad: TOTP codes, Push MFA approvals and KyIdentity sign-on. Contributions must keep authenticator secrets on the device and keep every sign-in approval behind an explicit human action.
 
 ## Before contributing
 
@@ -15,7 +15,7 @@ self-check.
 
 ## Security requirements
 
-- TOTP seeds, passkey material, and push-approval keys stay on the device in the Keychain / Secure Enclave; never transmit them off-device or write them to logs or crash reports.
+- TOTP seeds and push-approval keys stay on the device in the Keychain / Secure Enclave; never transmit them off-device or write them to logs or crash reports.
 - A sign-in or MFA approval happens only on an explicit user action, never automatically; a notification alone is not consent.
 - Do not add telemetry, phone-home, analytics, or unconfigured third-party
   services.
@@ -30,6 +30,11 @@ Run the checks that apply to the files you changed, and the repository's
 full required checks before hand-off. Record the exact commands and their
 results in the pull request.
 
+The complete native suite uses `bash scripts/test-ios.sh DISPOSABLE_SIMULATOR_UUID`;
+its loopback TLS fixtures need Go 1.26.10 and the documented test-host mapping.
+See [fixture setup](scripts/tls-fixtures/README.md). The ordinary production
+HTTPClient and trust policy remain in use during those tests.
+
 ## AI attribution
 
 AI-assisted contributions are welcome; undisclosed ones are not. Disclose
@@ -40,7 +45,7 @@ every purpose, regardless of how it was produced.
 
 ## Pull requests
 
-Branch off `main` with a focused name, and use a Conventional Commit subject
+Branch off `master` with a focused name, and use a Conventional Commit subject
 (`fix:`, `feat:`, `docs:`, `refactor:`, `test:`, or `chore:`). The pull request
 explains why the change exists, the verification performed, the security impact,
 and any known limitations.

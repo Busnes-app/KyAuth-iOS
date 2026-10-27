@@ -232,6 +232,21 @@ When the user requests a durable behavior change, record it here or in the relev
 ## Verification
 
 - `.github/workflows/tests.yml` runs the complete iOS simulator suite on pushes and pull requests; CodeQL separately builds/scans the app and extension. Product-specific TOTP/vault contracts and local checks live in `KyAuth/AGENTS.md`.
+- Native TLS tests run through `scripts/test-ios.sh DISPOSABLE_SIMULATOR_UUID`:
+  the standard-library fixture server, a reserved loopback hostname and generated anchors
+  imported only into that simulator qualify the real HTTPClient’s native trust,
+  literal all-chain key floor, protocol behavior and redirect refusal. Generated keys/results stay
+  in ignored `.tls-fixtures/`; the CA private key is never stored. CI retains
+  only each results directory, including its xcresult and public fixture
+  counters and the xcresult summary with assertion/native-error diagnostics;
+  enable hidden-file upload because the parent directory is hidden. Ordinary
+  URLSession strong-curve controls distinguish platform negotiation from the
+  application key policy without replacing normal trust.
+- CI artifacts expire, so every measurement an assurance answer relies on is
+  copied into `docs/native-tls-evidence.md` with its source run link, commit and
+  simulator/OS build. A platform refusal is recorded there and scoped to what was
+  tested; it never becomes a general claim about Apple TLS, and the fixture and
+  its host calibration stay in the suite.
 
 - Scorecard (`.github/workflows/scorecard.yml`) publishes public supply-chain security results on default-branch pushes, weekly and after branch-protection changes. Keep publishing restricted to the default branch, action pins immutable, checkout credentials disabled and OIDC/code-scanning writes scoped to the analysis job. README’s live Scorecard badge needs a successful published run.
 
@@ -239,14 +254,5 @@ When the user requests a durable behavior change, record it here or in the relev
 
 - `KyAuth/` — the KyAuth iOS app: product contracts, file ownership and verification.
 
-- `KyDrive-server/` — general drive backend, NAS/container packaging, Euro-Office integration and local acceptance evidence.
-
-- `ky-kubernetes/` — Ky stack migration from admin02 to K80/K81, isolated networking, persistent storage and HTTPS routing.
-
-- `kypost-site/` — KyPost marketing site, theme behavior, and generated reference pages.
-
-- `Busnes.app-site/` — public Busnes.app company and portfolio website.
-
-- `ky-ui/` — shared browser theme tokens, navigation state styles, and visual verification for suite web products.
-
-- `KyQuickStart/` — suite installer: third-party app catalog and admission rules, edge and reverse-proxy choices, app-aware bulk backups.
+- `scripts/tls-fixtures/` — disposable native TLS fixture generation/server and
+  host calibration; root owns CI, test-target wiring and the simulator runner.

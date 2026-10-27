@@ -17,6 +17,7 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 - `SignOn/`: `DeviceAssertion`, `TokenClient`, `SignOnHandoff` + `TrustedConsumers`.
 - `Totp/`: entries, generator, `otpauth://` parsing, `TotpVault`.
 - `Security/`: `UserPresence`, PIN policy and store, `IdleLock`, `LocalWipe`.
+- `Networking/`: the ephemeral HTTPClient session, native trust plus literal certificate-key floors and redirect refusal.
 - `../Shared/` (compiled into the app and the extension): `Keychain` + `KeychainCodable`, `PushKeyStore`,
   `PushCrypto` (`PushKeys`, RFC 8291 `WebPush.decrypt`, `PushPayload`).
 - `../KyAuthPush/`: the notification service extension (`org.kysecurity.authenticator.push`).
@@ -43,6 +44,17 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   `docs/specs/2026-10-11-ios-signon-handoff.md`. Change either only together with its counterpart
   (KyIdentity-server, KyPost-for-Mac).
 - Release builds require HTTPS; debug builds also accept loopback HTTP.
+- HTTPS retains the challenge’s normal SSL/hostname/time/anchor evaluation, then
+  checks every evaluated certificate including its anchor: actual RSA at least
+  2048 bits or prime EC at least 256 bits. Those types are an allowlist and
+  `TransportPolicy.hasStrongKey` fails closed — an unreadable key, an absent key
+  size or any other key type refuses the challenge. Never use rounded RSA block
+  bytes, replace trust policies/roots, add an insecure override or follow a
+  redirect to recover from refusal.
+- Keep that decision per certificate so it stays testable without TLS: the
+  platform can refuse a strong peer during the handshake, which is a native
+  refusal and not an application verdict. Observed and scoped in
+  `docs/native-tls-evidence.md`; never widen it into a claim about Apple TLS.
 - `PrivacyInfo.xcprivacy` declares every required-reason API the app uses (now `UserDefaults`
   CA92.1, `systemUptime` 35F9.1, file timestamps C617.1) and no tracking. Collected data: Device ID
   and User ID, app functionality, linked to the user (they are part of signing in), because the
@@ -121,8 +133,8 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 ## Verification
 
 ```bash
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project KyAuth.xcodeproj \
-  -scheme KyAuth -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' CODE_SIGNING_ALLOWED=NO test
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  bash scripts/test-ios.sh DISPOSABLE_SIMULATOR_UUID
 ```
 
 Not verifiable in the simulator: APNs delivery, Secure Enclave signing, App Attest, Face ID prompts,
@@ -131,6 +143,14 @@ shared Keychain group. Installed on an iPhone, and plaintext APNs delivery throu
 observed there (2026-10-13); encrypted pushes and the extension are not yet observed on hardware.
 
 CI (`.github/workflows/tests.yml`) runs the complete simulator test suite on Xcode 26.
+The fixture runner needs Go 1.26.10 and a host mapping of
+`127.0.0.1 kyauth-tls-test.invalid`; it imports only generated fixture anchors
+into the selected disposable simulator. See `scripts/tls-fixtures/README.md`.
+TLSKeyPolicyTests requires zero application bytes on refused weak/key/trust/
+protocol cases; strong peer and directly trusted-peer controls must succeed. A
+delegate-free URLSession runs the same strong-curve peers, so a native
+negotiation failure is told apart from the application floor and recorded in
+`docs/native-tls-evidence.md` with its run; neither is skipped or excused.
 Without Xcode, `scripts/check-push-crypto-linux.sh` (Docker) runs `PushCryptoTests` and
 `TotpTests` against swift-crypto with a persistent SwiftPM dependency cache. It does not
 verify Apple CryptoKit, vault/Keychain integration or SwiftUI. The encrypted mixed-legacy

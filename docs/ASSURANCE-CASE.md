@@ -45,7 +45,11 @@ passcode and holds the phone. iOS protections are the foundation this app builds
 1. **Phone → KyIdentity.** HTTPS only in release builds (`KyAuth/Pairing/PairingEndpoint.swift`,
    `isAllowedScheme`). Every endpoint is built from the paired server URL, and the one URL a QR
    code may name, the registration URL, must have the same origin. Redirects are refused, and
-   nothing is cached or kept in cookies (`KyAuth/Networking/HTTPClient.swift`).
+   nothing is cached or kept in cookies (`KyAuth/Networking/HTTPClient.swift`). The
+   native server trust is evaluated without replacing its policies or anchors, then
+   every certificate in its built chain must expose actual RSA>=2048 or prime EC>=256
+   key bits. This includes a root omitted from the wire and a directly trusted peer;
+   missing/unknown metadata refuses the challenge. RSA block bytes are not bit size.
 2. **APNs and the relay → phone.** Pushes are RFC 8291 `aes128gcm` sealed to a key pair made on
    the phone (`Shared/PushCrypto.swift`). The notification extension shows only fixed text.
    The app re-opens and checks every push itself (`KyAuth/Mfa/MfaChallenge.swift`, `MfaPushParser`).
@@ -80,6 +84,7 @@ passcode and holds the phone. iOS protections are the foundation this app builds
 | Push approval fatigue and spoofed requests | The user types the two digits the browser shows; match or decoy numbers in a payload are dropped | `KyAuth/Mfa/MfaChallenge.swift` (`MfaPushParser`) |
 | Push injection or reading by APNs or the relay | Pushes sealed to per-pairing keys; a pairing with keys refuses plaintext pushes | `Shared/PushCrypto.swift` (`PushPayload.fields`) |
 | Answer redirection through a payload or QR code | A payload `serverUrl` is ignored; a QR registration URL must share the server's origin; HTTPS only in release builds | `MfaPushParser`, `KyAuth/Pairing/PairingEndpoint.swift` |
+| Undersized TLS authentication keys | Normal SecTrust evaluation plus actual-bit checks on every evaluated certificate/anchor; no weak-key override | `KyAuth/Networking/HTTPClient.swift` (`TransportPolicy`) |
 | Open redirect, response caching | URLSession refuses redirects; ephemeral session, no cookies, no URL cache | `KyAuth/Networking/HTTPClient.swift` |
 | Signed-message ambiguity | Every field of the signed answer is checked for the `\|` separator and the purpose against a fixed set | `MfaMessage.payload` |
 | Device key theft | Secure Enclave P-256, `.privateKeyUsage` and `.userPresence`, passcode required, replaced at every pairing | `KyAuth/Pairing/DeviceSigningKey.swift` |
@@ -141,3 +146,49 @@ encrypted mixed vault; `DemoModeTests.modelRefusesWeakAddsReplacementsAndCopies`
 checks the app boundary. Native tests run in `.github/workflows/tests.yml`; the
 portable Docker harness exercises TOTP/push source with swift-crypto. These tests
 do not establish native TLS peer-key restrictions or physical-device acceptance.
+
+
+### Native TLS key floor
+
+The unchanged real HTTPClient sent 310 application bytes to a normally trusted
+literal RSA-2047 peer on the simulator ([measured run](native-tls-evidence.md)).
+Apple’s rounded key block size was therefore not
+a sufficient minimum. The session’s TransportPolicy now first requires ordinary
+SecTrust SSL/name/time/anchor evaluation, then inspects SecKeyCopyAttributes for
+every certificate in the evaluated chain. It accepts RSA>=2048 and prime EC>=256.
+It sets no new policies/anchors/trust
+exceptions and retains redirect refusal. Strong operator-installed private CAs
+remain subject to that same validation and floor. Existing vault/pairing/device
+keys and encrypted records are not migrated or discarded.
+
+The two accepted key types are an allowlist, so the check fails closed: an
+unreadable key, an absent key size, or any other key type is refused instead of
+assumed strong. `nativeKeyAttributesDecideTheChainFloor` proves that per
+certificate, driving `TransportPolicy.hasStrongKey` with real fixture
+certificates — RSA-2047 and an Ed25519 leaf refused, RSA-2048, P-256, P-384 and
+P-521 accepted. Deciding per certificate keeps the floor provable for a key type
+the platform may never negotiate.
+
+TLSKeyPolicyTests exercises the real shared transport with loopback peers, no
+URLProtocol mock or client trust override. Host calibration checks literal weak
+leaf/intermediate/root and directly trusted keys, omitted wire roots, strong
+RSA/P-256/P-384/P-521, trust failures and exact TLS versions. Of the twenty
+native peers, six must succeed and fourteen must be refused with zero
+application bytes; repeated requests and redirect refusal are checked
+separately. The full native suite is the runtime verification gate. Go fixture
+success alone is not Apple execution, and a successful local/simulator fixture
+does not certify a deployment or every supported OS/hardware version.
+Test setup/retained results: scripts/tls-fixtures/README.md.
+
+One of those fourteen is a native refusal rather than a policy refusal. The
+tested simulator does not negotiate the P-521 peer at all: a delegate-free
+ordinary URLSession is refused it too, with `NSURLErrorSecureConnectionFailed`,
+while the application policy accepts the same P-521 key and Go calibration
+completes an HTTPS round trip against the same fixture. The suite therefore
+requires both clients to receive zero HTTP bytes, and the control fails if an
+ordinary URLSession ever does negotiate that peer, since the key policy would
+then be the only refusal. This is scoped to the simulator, OS build and
+certificate configuration measured in
+[native TLS evidence](native-tls-evidence.md); it is not a claim that Apple TLS
+lacks P-521, and the cause is not isolated to a cipher suite or signature
+algorithm.
