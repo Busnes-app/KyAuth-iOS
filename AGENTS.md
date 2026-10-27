@@ -231,7 +231,25 @@ When the user requests a durable behavior change, record it here or in the relev
 
 ## Verification
 
-- `.github/workflows/tests.yml` runs the complete iOS simulator suite on pushes and pull requests; CodeQL separately builds/scans the app and extension. Product-specific TOTP/vault contracts and local checks live in `KyAuth/AGENTS.md`.
+- `.github/workflows/tests.yml` configures the complete simulator suite and a
+  Release app/extension build on pushes and pull requests to `master`; CodeQL
+  separately builds/scans those products and inherits warnings-as-errors.
+  Test targets compile in Debug during the suite. Product checks live in
+  `KyAuth/AGENTS.md`. Coverage and Release additions await native CI evidence.
+- Debug and Release set `SWIFT_TREAT_WARNINGS_AS_ERRORS = YES`. Fix valid
+  warnings or document false positives in the source; keep target settings
+  inherited. Swift 5 language mode does not enable complete concurrency
+  diagnostics, so this alone does not establish OpenSSF `warnings_strict`.
+- `scripts/test-ios.sh` retains validated app line counts in `coverage.json`
+  beside the xcresult after successful tests, stats and coverage export.
+  Usable reports from failed tests or incomplete runs have explicitly named
+  coverage artifacts; invalid or failed exports are removed. Evidence-export
+  failures fail the job even when native tests pass.
+  The extension is reported as absent, unexercised or with its own line counts.
+  Shared sources compile into both products, so their counts are not additive.
+  Line counts alone do not prove branch, input or functionality coverage. Record
+  dated coverage assessments with source run and commit in
+  `docs/ASSURANCE-CASE.md` before using them in badge answers.
 - Native TLS tests run through `scripts/test-ios.sh DISPOSABLE_SIMULATOR_UUID`:
   the standard-library fixture server, a reserved loopback hostname and generated anchors
   imported only into that simulator qualify the real HTTPClient’s native trust,
@@ -242,7 +260,7 @@ When the user requests a durable behavior change, record it here or in the relev
   enable hidden-file upload because the parent directory is hidden. Ordinary
   URLSession strong-curve controls distinguish platform negotiation from the
   application key policy without replacing normal trust.
-- CI artifacts expire, so every measurement an assurance answer relies on is
+- CI artifacts expire, so every TLS measurement an assurance answer relies on is
   copied into `docs/native-tls-evidence.md` with its source run link, commit and
   simulator/OS build. A platform refusal is recorded there and scoped to what was
   tested; it never becomes a general claim about Apple TLS, and the fixture and

@@ -109,8 +109,12 @@ accepted when the setup code asks for them.
   existed, KyIdentity's IDs in plaintext (`Distribution/AppStore/app-privacy.md`).
 - On hardware, encrypted pushes and the notification extension are not yet observed;
   plaintext delivery through the real relay was (`KyAuth/AGENTS.md`, Verification).
-- CI only builds the app and runs CodeQL on the Swift and the workflows (`.github/workflows/codeql.yml`).
-  The tests run on the maintainer's Mac before a release, not in CI.
+- CI configures the complete native simulator suite on pushes and pull requests
+  to `master` (`.github/workflows/tests.yml`); CodeQL scans Swift and workflows.
+  As of 2026-10-27, coverage export, warnings-as-errors and the Release build are
+  configured but await their first native CI result. Swift 5 mode without complete
+  concurrency diagnostics leaves OpenSSF `warnings_strict` unverified. Hardware-only
+  paths remain outside the simulator suite.
 - No independent security audit has taken place.
 
 ## Evidence
@@ -118,7 +122,17 @@ accepted when the setup code asks for them.
 - **Tests:** `KyAuthTests` covers pairing and endpoint validation, push parsing and the signed
   message, RFC 8291 vectors, sign-on handoff validation, TOTP, the vault and the PIN policy.
   Without Xcode, `scripts/check-push-crypto-linux.sh` runs the push crypto vectors against
-  swift-crypto.
+  swift-crypto. The runner is configured to retain `coverage.json` (`xcrun xccov`)
+  only after successful native tests, stats and coverage export, requiring exactly
+  one usable `KyAuth.app` target. Failed tests and incomplete runs use explicitly
+  named artifacts when a usable report exists; invalid/failed exports are removed
+  and fail the job even if tests passed. The extension is reported as absent,
+  unexercised or with its
+  separate line counts. First native measurement is pending as of 2026-10-27.
+  Shared sources compile into both products; their counts are not additive.
+  Commit a dated coverage assessment here, citing the run and commit,
+  before using these artifacts for an answer. Line counts alone do not establish
+  branch, input or requirement coverage.
 - **Contracts:** wire formats shared with KyIdentity are byte-exact and covered by golden
   vectors ([KyAuth/AGENTS.md](../KyAuth/AGENTS.md)).
 - **Review:** every change lands through a pull request.

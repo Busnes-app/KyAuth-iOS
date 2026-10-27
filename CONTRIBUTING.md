@@ -33,7 +33,18 @@ results in the pull request.
 The complete native suite uses `bash scripts/test-ios.sh DISPOSABLE_SIMULATOR_UUID`;
 its loopback TLS fixtures need Go 1.26.10 and the documented test-host mapping.
 See [fixture setup](scripts/tls-fixtures/README.md). The ordinary production
-HTTPClient and trust policy remain in use during those tests.
+HTTPClient and trust policy remain in use during those tests. A successful run writes
+a `coverage.json` app line-count report next to its result bundle; absent or
+unexercised extension coverage is reported separately. Usable reports from failed
+tests or incomplete runs retain explicit names; invalid or failed exports are
+removed. An evidence-export failure fails the job even when native tests pass.
+Shared sources compile into both products, so their counts are not additive. CI is configured to build the app
+and extension in Release even if tests fail; these additions await native CI evidence.
+
+Swift warnings are errors (`SWIFT_TREAT_WARNINGS_AS_ERRORS`). Fix the warning, or
+document a false positive in the source — do not silence the diagnostic. This
+also applies to the CodeQL build. Swift 5 mode without complete concurrency
+diagnostics does not yet establish OpenSSF `warnings_strict`.
 
 ## AI attribution
 
