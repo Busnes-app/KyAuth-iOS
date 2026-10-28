@@ -105,3 +105,12 @@ not evidence of live push or security qualification. Design contracts are in `do
 [MIT](LICENSE.txt).
 
 [![OctoCounts](https://api.octocounts.com/badge/Busnes-app/KyAuth-iOS/branch/master)](https://octocounts.com/github/Busnes-app/KyAuth-iOS/tree/master)
+
+## Documentation
+
+- [Verifying releases](docs/VERIFYING-RELEASES.md) — how releases are distributed and what you can verify.
+- [App privacy](Distribution/AppStore/app-privacy.md) — the App Store privacy answers and the manifest they must match.
+- [TLS key-floor evidence](docs/native-tls-evidence.md) — observations behind the certificate-key floor.
+- [Assurance case](docs/ASSURANCE-CASE.md) — threat model, trust boundaries, and why the security requirements are met.
+- [Contributing](CONTRIBUTING.md) — how to propose a change and what it must pass.
+- [Security policy](SECURITY.md) — how to report a vulnerability privately.
