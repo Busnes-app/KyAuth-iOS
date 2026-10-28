@@ -2,7 +2,6 @@
 
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15922/badge)](https://www.bestpractices.dev/projects/15922)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Busnes-app/KyAuth-iOS/badge)](https://scorecard.dev/viewer/?uri=github.com/Busnes-app/KyAuth-iOS)
-[![OctoCounts](https://api.octocounts.com/badge/Busnes-app/KyAuth-iOS/branch/master)](https://octocounts.com/github/Busnes-app/KyAuth-iOS/tree/master)
 
 KyAuth is a native authenticator for iPhone and iPad. Generate local TOTP codes, approve
 KyIdentity push MFA requests with number matching, and sign in to supported suite apps
@@ -104,3 +103,5 @@ not evidence of live push or security qualification. Design contracts are in `do
 ## License
 
 [MIT](LICENSE.txt).
+
+[![OctoCounts](https://api.octocounts.com/badge/Busnes-app/KyAuth-iOS/branch/master)](https://octocounts.com/github/Busnes-app/KyAuth-iOS/tree/master)
