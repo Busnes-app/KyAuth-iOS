@@ -233,7 +233,9 @@ When the user requests a durable behavior change, record it here or in the relev
 
 - `.github/workflows/tests.yml` configures the complete simulator suite and a
   Release app/extension build on pushes and pull requests to `master`; CodeQL
-  separately builds/scans those products and inherits warnings-as-errors.
+  separately builds/scans those products (arm64 simulator slice) and inherits
+  warnings-as-errors, and scans the Go TLS fixtures and workflows. Newer pushes
+  cancel superseded pull-request runs, never `master` runs.
   Test targets compile in Debug during the suite. Product checks live in
   `KyAuth/AGENTS.md`. Coverage and Release additions await native CI evidence.
 - Debug and Release set `SWIFT_TREAT_WARNINGS_AS_ERRORS = YES`. Fix valid

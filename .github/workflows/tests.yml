@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   simulator:
     name: iOS tests
@@ -36,6 +40,13 @@ jobs:
           devices = json.load(sys.stdin)["devices"]
           print(next(d["udid"] for group in devices.values() for d in group if d["name"].startswith("iPhone")))')
           echo "id=$device" >> "$GITHUB_OUTPUT"
+      - name: Configure the disposable runner's fixture hostname
+        run: printf '127.0.0.1 kyauth-tls-test.invalid\n' | sudo tee -a /etc/hosts > /dev/null
+      - name: Start booting the simulator
+        # Boots in the background while Go sets up and tests; test-ios.sh waits for it.
+        env:
+          SIMULATOR_ID: ${{ steps.destination.outputs.id }}
+        run: nohup xcrun simctl boot "$SIMULATOR_ID" > "$RUNNER_TEMP/simctl-boot.log" 2>&1 &
       - name: Set up the standard-library TLS fixture server
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -43,8 +54,6 @@ jobs:
           cache-dependency-path: scripts/tls-fixtures/go.mod
       - name: Verify host TLS fixtures
         run: GODEBUG=fips140=off go -C scripts/tls-fixtures test -race -count=1 ./...
-      - name: Configure the disposable runner's fixture hostname
-        run: printf '127.0.0.1 kyauth-tls-test.invalid\n' | sudo tee -a /etc/hosts > /dev/null
       - name: Run the complete simulator test suite
         id: suite
         env:

@@ -26,7 +26,8 @@ import json, sys
 device = sys.argv[1]
 print(next(d["state"] for group in json.load(sys.stdin)["devices"].values() for d in group if d["udid"] == device))
 ' "$fixture_simulator")
-if [ "$fixture_state" != Booted ]; then
+# CI starts the boot early; bootstatus waits for a device that is still booting.
+if [ "$fixture_state" = Shutdown ]; then
   xcrun simctl boot "$fixture_simulator"
 fi
 xcrun simctl bootstatus "$fixture_simulator" -b
