@@ -5,20 +5,12 @@ struct MainTabView: View {
     @State private var tab = MainTab.codes
 
     var body: some View {
-        // The tab bar fills every symbol unless its view sets `.none` (the default everywhere else);
-        // only the selected tab names a filled icon.
         TabView(selection: $tab) {
             VaultView()
-                .tabItem {
-                    Label("Codes", systemImage: tab == .codes ? "lock.shield.fill" : "lock.shield")
-                }
-                .environment(\.symbolVariants, .none)
+                .tabItem { TabLabel(title: "Codes", symbol: "lock.shield", selected: tab == .codes) }
                 .tag(MainTab.codes)
             SettingsView()
-                .tabItem {
-                    Label("Settings", systemImage: tab == .settings ? "gearshape.fill" : "gearshape")
-                }
-                .environment(\.symbolVariants, .none)
+                .tabItem { TabLabel(title: "Settings", symbol: "gearshape", selected: tab == .settings) }
                 .tag(MainTab.settings)
         }
         // A pairing form that was open when KyAuth locked comes back once it is unlocked.
@@ -134,6 +126,22 @@ struct VaultView: View {
 
 enum MainTab {
     case codes, settings
+}
+
+/// A tab item whose icon is outline unless selected. The iOS 26 tab bar fills every SF Symbol
+/// and ignores `symbolVariants`, so the icon is handed over as a template `UIImage`.
+private struct TabLabel: View {
+    let title: LocalizedStringKey
+    let symbol: String
+    let selected: Bool
+
+    var body: some View {
+        Label {
+            Text(title)
+        } icon: {
+            Image(uiImage: UIImage(systemName: selected ? symbol + ".fill" : symbol)!.withRenderingMode(.alwaysTemplate))
+        }
+    }
 }
 
 enum VaultSheet: Identifiable {
