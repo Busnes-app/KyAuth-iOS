@@ -5,17 +5,39 @@ struct MainTabView: View {
     @State private var tab = MainTab.codes
 
     var body: some View {
-        TabView(selection: $tab) {
-            VaultView()
-                .tabItem { TabLabel(title: "Codes", symbol: "lock.shield", selected: tab == .codes) }
-                .tag(MainTab.codes)
-            SettingsView()
-                .tabItem { TabLabel(title: "Settings", symbol: "gearshape", selected: tab == .settings) }
-                .tag(MainTab.settings)
-        }
+        tabs
         // A pairing form that was open when KyAuth locked comes back once it is unlocked.
         .sheet(isPresented: Binding(get: { model.resumePairing }, set: { if !$0 { model.pairingFormClosed() } })) {
             PairingView()
+        }
+    }
+
+    // iOS 18's `Tab` draws the template icon as given; on iOS 26, `.tabItem` still fills the
+    // inactive Settings gear on first render.
+    @ViewBuilder
+    private var tabs: some View {
+        if #available(iOS 18, *) {
+            TabView(selection: $tab) {
+                Tab(value: MainTab.codes) {
+                    VaultView()
+                } label: {
+                    TabLabel(title: "Codes", symbol: "lock.shield", selected: tab == .codes)
+                }
+                Tab(value: MainTab.settings) {
+                    SettingsView()
+                } label: {
+                    TabLabel(title: "Settings", symbol: "gearshape", selected: tab == .settings)
+                }
+            }
+        } else {
+            TabView(selection: $tab) {
+                VaultView()
+                    .tabItem { TabLabel(title: "Codes", symbol: "lock.shield", selected: tab == .codes) }
+                    .tag(MainTab.codes)
+                SettingsView()
+                    .tabItem { TabLabel(title: "Settings", symbol: "gearshape", selected: tab == .settings) }
+                    .tag(MainTab.settings)
+            }
         }
     }
 }
