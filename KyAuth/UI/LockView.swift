@@ -67,7 +67,7 @@ struct PinUnlockView: View {
                 } header: {
                     Text("Enter your KyAuth PIN").sectionHeaderStyle()
                 } footer: {
-                    if let error { StatusLabel(error, .danger) }
+                    if let error { StatusLabel(error, .danger).sectionFooterStyle() }
                 }
                 Section {
                     Button("Unlock", action: submit)

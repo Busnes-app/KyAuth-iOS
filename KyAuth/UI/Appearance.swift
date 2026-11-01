@@ -81,6 +81,12 @@ struct ThemedList<Content: View>: View {
 }
 
 extension View {
+    /// A grouped-list section footer: footnote in the suite face. Without it the footer takes
+    /// `RootView`'s body-size default.
+    func sectionFooterStyle() -> some View {
+        font(AppFont.ui(.footnote))
+    }
+
     /// `.borderedProminent` with the theme's label color on its accent (dark text on dark-half
     /// accents, where white would fail contrast).
     func themedProminentButton() -> some View {

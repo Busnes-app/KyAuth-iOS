@@ -19,7 +19,7 @@ struct SettingsView: View {
                     } header: {
                         Text("Demo mode").sectionHeaderStyle()
                     } footer: {
-                        Text("Codes and sign-in requests here are simulated and kept in memory: none are saved or sent anywhere. Exit the demo to pair with KyIdentity.")
+                        Text("Codes and sign-in requests here are simulated and kept in memory: none are saved or sent anywhere. Exit the demo to pair with KyIdentity.").sectionFooterStyle()
                     }
                 } else {
                     kyIdentitySection
@@ -40,7 +40,7 @@ struct SettingsView: View {
                     } header: {
                         Text("Sign-in requests").sectionHeaderStyle()
                     } footer: {
-                        Text("KyIdentity sends sign-in requests to this device through Apple Push.")
+                        Text("KyIdentity sends sign-in requests to this device through Apple Push.").sectionFooterStyle()
                     }
                 }
                 if !model.isDemo {
@@ -59,7 +59,7 @@ struct SettingsView: View {
                     } header: {
                         Text("Security").sectionHeaderStyle()
                     } footer: {
-                        Text("KyAuth locks when you leave it, and after the auto-lock time in the app. A PIN is asked after \(UserPresence.biometryName). Five wrong PINs erase KyAuth's data on this device.")
+                        Text("KyAuth locks when you leave it, and after the auto-lock time in the app. A PIN is asked after \(UserPresence.biometryName). Five wrong PINs erase KyAuth's data on this device.").sectionFooterStyle()
                     }
                 }
                 Section {
@@ -80,7 +80,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Appearance").sectionHeaderStyle()
                 } footer: {
-                    Text("Each theme has a light and a dark version. System switches between them with this device's setting.")
+                    Text("Each theme has a light and a dark version. System switches between them with this device's setting.").sectionFooterStyle()
                 }
                 Section {
                     LabeledContent("Version", value: Bundle.main.versionString)
@@ -94,7 +94,7 @@ struct SettingsView: View {
                 } header: {
                     Text("About").sectionHeaderStyle()
                 } footer: {
-                    Text("Codes are stored only on this device, encrypted, with no backup or sync. If you lose the device, use your KyIdentity recovery codes.")
+                    Text("Codes are stored only on this device, encrypted, with no backup or sync. If you lose the device, use your KyIdentity recovery codes.").sectionFooterStyle()
                 }
                 if !model.isDemo {
                     Section {
@@ -139,9 +139,12 @@ struct SettingsView: View {
         } header: {
             Text("KyIdentity").sectionHeaderStyle()
         } footer: {
-            if model.account?.canSignOn == false {
-                Text("To let suite apps such as KyPost sign in through this device, turn on sign-in for this device on the KyIdentity devices page, then pair again.")
+            Group {
+                if model.account?.canSignOn == false {
+                    Text("To let suite apps such as KyPost sign in through this device, turn on sign-in for this device on the KyIdentity devices page, then pair again.")
+                }
             }
+            .sectionFooterStyle()
         }
     }
 
@@ -261,11 +264,14 @@ struct PinSetupView: View {
                     SecureField("Confirm PIN", text: $confirmation, prompt: Text("Confirm PIN").placeholderStyle())
                         .keyboardType(.numberPad)
                 } footer: {
-                    if let error {
-                        StatusLabel(error, .danger)
-                    } else {
-                        Text("\(PinPolicy.minLength) to \(PinPolicy.maxLength) digits. Avoid common or sequential numbers.")
+                    Group {
+                        if let error {
+                            StatusLabel(error, .danger)
+                        } else {
+                            Text("\(PinPolicy.minLength) to \(PinPolicy.maxLength) digits. Avoid common or sequential numbers.")
+                        }
                     }
+                    .sectionFooterStyle()
                 }
             }
             .navigationTitle("KyAuth PIN")

@@ -134,7 +134,7 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   labels. Codes and countdowns add `.monospacedDigit()`; the setup key and the license stay system
   monospaced. System alerts and confirmation dialogs keep the system face.
 - Section headers and Settings rows are sentence case ("Exit demo", "Source code"); section
-  headers use `.sectionHeaderStyle()`; field prompts use
+  headers use `.sectionHeaderStyle()` and footers `.sectionFooterStyle()`; field prompts use
   `.placeholderStyle()` (both ink at 60%, at least 4.5:1 on every half). Settings rows are ink
   (`SettingsRowLabel`): a chevron when they open a sheet or screen, `arrow.up.right` when they
   leave KyAuth. The accent marks only Exit demo; destructive rows stay system red.
