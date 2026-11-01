@@ -47,7 +47,8 @@ struct RootView: View {
             Text("A wrong PIN was entered five times, so KyAuth erased its codes, pairing and PIN on this device.")
         }
         .overlay(alignment: .bottom) { Toast(message: $model.notice) }
-        // Outermost, so the sheet and alerts above resolve theme colors too.
+        // Outermost, so the sheet and alerts above resolve theme colors and the suite face too.
+        .font(AppFont.ui(.body))
         .environment(\.themePair, model.themePair)
     }
 }
@@ -88,7 +89,7 @@ struct BrandMark: View {
                 .clipShape(RoundedRectangle(cornerRadius: size * 0.225, style: .continuous))
                 .accessibilityHidden(true)
             Text("KyAuth")
-                .font(.largeTitle.weight(.bold))
+                .font(AppFont.ui(.largeTitle, weight: .bold))
         }
     }
 }
@@ -99,7 +100,7 @@ struct Toast: View {
     var body: some View {
         if let message {
             Text(message)
-                .font(.subheadline.weight(.medium))
+                .font(AppFont.ui(.subheadline, weight: .medium))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
                 .background(.regularMaterial, in: Capsule())

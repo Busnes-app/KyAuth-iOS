@@ -15,7 +15,7 @@ struct SettingsView: View {
             ThemedForm {
                 if model.isDemo {
                     Section {
-                        Button("Exit Demo") { model.lock() }
+                        Button("Exit demo") { model.lock() }
                     } header: {
                         Text("Demo mode").sectionHeaderStyle()
                     } footer: {
@@ -35,7 +35,7 @@ struct SettingsView: View {
                             }
                         }
                         if model.needsPushRefresh {
-                            Button { Task { await model.reconnectPush() } } label: { SettingsRowLabel("Reconnect Sign-in Requests") }
+                            Button { Task { await model.reconnectPush() } } label: { SettingsRowLabel("Reconnect sign-in requests") }
                         }
                     } header: {
                         Text("Sign-in requests").sectionHeaderStyle()
@@ -45,14 +45,14 @@ struct SettingsView: View {
                 }
                 if !model.isDemo {
                     Section {
-                        Picker("Auto-Lock", selection: $model.idleMinutes) {
+                        Picker("Auto-lock", selection: $model.idleMinutes) {
                             ForEach(IdleLock.minuteChoices, id: \.self) { minutes in
                                 Text(minutes == 60 ? "1 hour" : "\(minutes) minute\(minutes == 1 ? "" : "s")")
                             }
                         }
                         if model.pinEnabled {
                             Button { showPinSetup = true } label: { SettingsRowLabel("Change PIN", trailing: .chevron) }
-                            Button("Turn Off PIN", role: .destructive) { model.removePin() }
+                            Button("Turn off PIN", role: .destructive) { model.removePin() }
                         } else {
                             Button { showPinSetup = true } label: { SettingsRowLabel("Set a PIN", trailing: .chevron) }
                         }
@@ -85,11 +85,11 @@ struct SettingsView: View {
                 Section {
                     LabeledContent("Version", value: Bundle.main.versionString)
                     Link(destination: URL(string: "https://github.com/Busnes-app/KyAuth-iOS")!) {
-                        SettingsRowLabel("Source Code", trailing: .external)
+                        SettingsRowLabel("Source code", trailing: .external)
                     }
                     NavigationLink("License") { LicenseView() }
                     Link(destination: URL(string: "https://busnes.app/privacy.html")!) {
-                        SettingsRowLabel("Privacy Policy", trailing: .external)
+                        SettingsRowLabel("Privacy policy", trailing: .external)
                     }
                 } header: {
                     Text("About").sectionHeaderStyle()
@@ -98,7 +98,7 @@ struct SettingsView: View {
                 }
                 if !model.isDemo {
                     Section {
-                        Button("Erase All Data", role: .destructive) { confirmErase = true }
+                        Button("Erase all data", role: .destructive) { confirmErase = true }
                     }
                 }
             }
@@ -131,7 +131,7 @@ struct SettingsView: View {
                         .multilineTextAlignment(.trailing)
                 }
                 LabeledContent("Sign in to apps", value: account.canSignOn ? "On" : "Off")
-                Button { showPairing = true } label: { SettingsRowLabel("Pair Again", trailing: .chevron) }
+                Button { showPairing = true } label: { SettingsRowLabel("Pair again", trailing: .chevron) }
                 Button("Unpair", role: .destructive) { confirmUnpair = true }
             } else {
                 Button { showPairing = true } label: { SettingsRowLabel("Pair with KyIdentity", trailing: .chevron) }
@@ -155,7 +155,7 @@ struct SettingsView: View {
     }
 }
 
-/// A Settings row title in ink, so the accent marks only Exit Demo. A chevron means it opens a
+/// A Settings row title in ink, so the accent marks only Exit demo. A chevron means it opens a
 /// sheet or screen, an arrow that it leaves KyAuth.
 struct SettingsRowLabel: View {
     enum Trailing { case none, chevron, external }

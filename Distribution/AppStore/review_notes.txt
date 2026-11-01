@@ -20,7 +20,7 @@ PRACTICE A SIGN-IN REQUEST
 - The next request arrives 15 seconds after each one is answered or dismissed.
 
 GOOD TO KNOW
-- The demo ends whenever the app locks: when you leave the app, after the auto-lock time, or when you tap Lock or Settings > Exit Demo. Tap Try Demo again to go back in.
+- The demo ends whenever the app locks: when you leave the app, after the auto-lock time, or when you tap Lock or Settings > Exit demo. Tap Try Demo again to go back in.
 - In the demo, Settings hides the PIN, auto-lock, pairing and erase options. They are available outside the demo.
 - If you set a PIN outside the demo, note that five wrong PINs erase all of KyAuth's data on the device, by design.
 - Pairing with KyIdentity (Settings > Pair with KyIdentity, or scanning a pairing QR code) and signing in to other apps from the same developer need an organization's KyIdentity server, so they can't be completed during review. The demo shows the sign-in request they lead to.

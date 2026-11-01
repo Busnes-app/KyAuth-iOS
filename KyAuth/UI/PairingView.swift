@@ -158,7 +158,7 @@ struct SignOnSheet: View {
                     .foregroundStyle(.tint)
                     .padding(.top, 32)
                 Text(message)
-                    .font(.title3)
+                    .font(AppFont.ui(.title3))
                     .multilineTextAlignment(.center)
                 Spacer()
                 VStack(spacing: 12) {

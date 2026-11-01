@@ -100,7 +100,7 @@ final class AppModel {
             let context = try await UserPresence.evaluate(reason: "Unlock your KyAuth codes")
             guard generation == lockGeneration else { return context.invalidate() }
             // A missing vault key still unlocks, with saving disabled and the error shown, so Settings
-            // and Erase All Data stay reachable.
+            // and Erase all data stay reachable.
             let key: SymmetricKey?
             do {
                 try TotpVault.standard.ensureKey()

@@ -162,10 +162,10 @@ struct ReconnectBanner: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Label("Sign-in requests paused", systemImage: "bell.slash")
-                .font(.headline)
+                .font(AppFont.ui(.headline, weight: .semibold))
                 .foregroundStyle(.themeWarning)
             Text("Apple gave KyAuth a new push address. Reconnect so KyIdentity can reach this device.")
-                .font(.subheadline)
+                .font(AppFont.ui(.subheadline))
                 .foregroundStyle(.secondary)
             Button("Reconnect") { Task { await model.reconnectPush() } }
                 .themedProminentButton()
@@ -189,16 +189,16 @@ struct TotpRow: View {
                 HStack(spacing: 14) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(entry.title)
-                            .font(.subheadline.weight(.medium))
+                            .font(AppFont.ui(.subheadline, weight: .medium))
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                         Text(code.map(TotpGenerator.formatted) ?? "Unavailable")
-                            .font(.system(.title, design: .rounded).monospacedDigit().weight(.semibold))
+                            .font(AppFont.ui(.title, weight: .semibold).monospacedDigit())
                             .foregroundStyle(remaining <= 5 ? AnyShapeStyle(ThemeColor.themeWarning) : AnyShapeStyle(Color.primary))
                             .contentTransition(.numericText())
                         if code == nil {
                             Text("Set up this account again at its service using a new key. Keep your recovery codes until it works.")
-                                .font(.subheadline)
+                                .font(AppFont.ui(.subheadline))
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -232,7 +232,7 @@ struct CountdownRing: View {
                 .rotationEffect(.degrees(-90))
                 .animation(.linear(duration: 1), value: remaining)
             Text("\(remaining)")
-                .font(.caption2.monospacedDigit())
+                .font(AppFont.ui(.caption2).monospacedDigit())
                 .foregroundStyle(.secondary)
         }
         .frame(width: 30, height: 30)
