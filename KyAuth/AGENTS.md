@@ -128,6 +128,8 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 - Use `ThemedForm`/`ThemedList` instead of `Form`/`List`, `.themeBackground` behind other screens,
   `.themeSurface` for cards and `themedProminentButton()` for filled buttons. Colors come from
   `ThemeColor`, which reads `\.themePair`, set once on `RootView`.
+- No `.pickerStyle(.navigationLink)`: its pushed list keeps the system background. Push a
+  `ThemedForm` instead (`ThemePickerView`).
 - Appearance setting (`UI/Theme.swift`, applied on the window by `UI/Appearance.swift`): Appearance
   System (default, follows iOS), Light or Dark, saved as `appearance`, and Theme, a pair, saved as
   `theme-pair` (ky-ui pair IDs). A saved `light`/`dark` with no pair is the former Busnes Light/Dark
