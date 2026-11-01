@@ -25,7 +25,7 @@ struct LockView: View {
                         Label("Unlock with \(UserPresence.biometryName)", systemImage: UserPresence.biometrySymbol)
                             .frame(maxWidth: .infinity)
                     }
-                    .busnesProminentButton()
+                    .themedProminentButton()
                     .controlSize(.large)
                     if !model.isPaired && model.pendingChallenge == nil {
                         Button("Try Demo") { model.startDemo() }
@@ -36,7 +36,7 @@ struct LockView: View {
                 .frame(maxWidth: 520)
                 .frame(maxWidth: .infinity)
             }
-            .background(Color.busnesBackground)
+            .background(.themeBackground)
             .navigationBarTitleDisplayMode(.inline)
         }
         .task {
@@ -57,7 +57,7 @@ struct PinUnlockView: View {
 
     var body: some View {
         NavigationStack {
-            BusnesForm {
+            ThemedForm {
                 Section {
                     SecureField("PIN", text: $pin)
                         .keyboardType(.numberPad)
@@ -67,7 +67,7 @@ struct PinUnlockView: View {
                 } header: {
                     Text("Enter your KyAuth PIN")
                 } footer: {
-                    if let error { Text(error).foregroundStyle(.red) }
+                    if let error { StatusLabel(error, .danger) }
                 }
                 Section {
                     Button("Unlock", action: submit)

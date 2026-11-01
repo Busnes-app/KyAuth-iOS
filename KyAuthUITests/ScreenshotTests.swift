@@ -32,7 +32,7 @@ final class ScreenshotTests: XCTestCase {
 
     /// Demo requests arrive within 5 s of the demo starting and 15 s after the last answer, so the
     /// request is captured first; denying it leaves 15 s of plain codes once its toast has gone.
-    /// Both shots fall in one 30 s code period with at least 15 s left, before the codes turn red.
+    /// Both shots fall in one 30 s code period with at least 15 s left, before the codes change to the warning colour.
     private func captureRequestThenCodes(_ app: XCUIApplication, suffix: String) throws {
         let deny = app.buttons["Deny"]
         XCTAssertTrue(deny.waitForExistence(timeout: 25), "No demo sign-in request arrived")

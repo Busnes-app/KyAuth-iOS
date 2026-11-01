@@ -31,7 +31,7 @@ struct QRScannerView: View {
                     Button("Open Settings") {
                         if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
                     }
-                    .busnesProminentButton()
+                    .themedProminentButton()
                 }
             }
         }

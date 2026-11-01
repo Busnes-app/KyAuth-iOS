@@ -12,7 +12,7 @@ struct SettingsView: View {
     var body: some View {
         @Bindable var model = model
         NavigationStack {
-            BusnesForm {
+            ThemedForm {
                 if model.isDemo {
                     Section {
                         Button("Exit Demo") { model.lock() }
@@ -26,7 +26,7 @@ struct SettingsView: View {
                 }
                 if model.isPaired {
                     Section {
-                        LabeledContent("Notifications", value: notificationText)
+                        LabeledContent("Notifications") { notificationStatusView }
                         if notificationStatus == .denied {
                             Button("Open Settings") {
                                 UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!)
@@ -64,8 +64,21 @@ struct SettingsView: View {
                     Picker("Appearance", selection: $model.appearance) {
                         ForEach(Appearance.allCases) { Text($0.title).tag($0) }
                     }
+                    // Not a `.navigationLink` picker: its pushed list keeps the system background.
+                    NavigationLink {
+                        ThemePickerView(selection: $model.themePair)
+                    } label: {
+                        LabeledContent("Theme") {
+                            HStack(spacing: 8) {
+                                ThemeSwatch(pair: model.themePair)
+                                Text(model.themePair.title)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Appearance")
                 } footer: {
-                    Text("System switches between Busnes Light and Busnes Dark with this device's setting.")
+                    Text("Each theme has a light and a dark version. System switches between them with this device's setting.")
                 }
                 Section {
                     LabeledContent("Version", value: Bundle.main.versionString)
@@ -126,12 +139,40 @@ struct SettingsView: View {
         }
     }
 
-    private var notificationText: String {
+    @ViewBuilder
+    private var notificationStatusView: some View {
         switch notificationStatus {
-        case .authorized, .provisional, .ephemeral: "On"
-        case .denied: "Off"
-        default: "Not set"
+        case .authorized, .provisional, .ephemeral: StatusLabel("On", .success)
+        case .denied: StatusLabel("Off", .warning)
+        default: Text("Not set")
         }
+    }
+}
+
+/// The six pairs on the theme background, each row previewing both halves.
+struct ThemePickerView: View {
+    @Binding var selection: ThemePair
+
+    var body: some View {
+        ThemedForm {
+            ForEach(ThemePair.allCases) { pair in
+                Button { selection = pair } label: {
+                    HStack(spacing: 12) {
+                        ThemeSwatch(pair: pair)
+                        Text(pair.title)
+                        Spacer()
+                        if pair == selection {
+                            Image(systemName: "checkmark").fontWeight(.semibold).foregroundStyle(.themeAccent)
+                        }
+                    }
+                }
+                // A Form button tints its whole label; only the checkmark takes the accent.
+                .tint(.primary)
+                .accessibilityAddTraits(pair == selection ? .isSelected : [])
+            }
+        }
+        .navigationTitle("Theme")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -142,7 +183,7 @@ struct LicenseView: View {
                 .font(.footnote.monospaced())
                 .padding()
         }
-        .background(Color.busnesBackground)
+        .background(.themeBackground)
         .navigationTitle("License")
     }
 
@@ -171,7 +212,7 @@ struct PinSetupView: View {
 
     var body: some View {
         NavigationStack {
-            BusnesForm {
+            ThemedForm {
                 Section {
                     SecureField("New PIN", text: $pin)
                         .keyboardType(.numberPad)
@@ -179,7 +220,7 @@ struct PinSetupView: View {
                         .keyboardType(.numberPad)
                 } footer: {
                     if let error {
-                        Text(error).foregroundStyle(.red)
+                        StatusLabel(error, .danger)
                     } else {
                         Text("\(PinPolicy.minLength) to \(PinPolicy.maxLength) digits. Avoid common or sequential numbers.")
                     }

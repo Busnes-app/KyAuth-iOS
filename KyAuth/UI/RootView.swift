@@ -17,7 +17,7 @@ struct RootView: View {
                 PrivacyCover()
             }
         }
-        .tint(.accentColor)
+        .tint(Color(model.themePair.assetName(.accent)))
         .background(ActivityTracker { model.recordActivity() })
         .onReceive(Timer.publish(every: 5, on: .main, in: .common).autoconnect()) { _ in
             model.checkIdle()
@@ -28,9 +28,9 @@ struct RootView: View {
         }
         .onAppear {
             model.screenCaptured = ScreenCapture.isActive
-            model.appearance.apply()
+            model.theme.apply()
         }
-        .onChange(of: model.appearance) { _, appearance in appearance.apply() }
+        .onChange(of: model.theme) { _, theme in theme.apply() }
         .sheet(item: Binding(get: { model.signOnRequest.map(SignOnSheetItem.init) }, set: { _ in })) { item in
             SignOnSheet(request: item.request)
         }
@@ -47,6 +47,8 @@ struct RootView: View {
             Text("A wrong PIN was entered five times, so KyAuth erased its codes, pairing and PIN on this device.")
         }
         .overlay(alignment: .bottom) { Toast(message: $model.notice) }
+        // Outermost, so the sheet and alerts above resolve theme colors too.
+        .environment(\.themePair, model.themePair)
     }
 }
 
@@ -59,7 +61,7 @@ private struct SignOnSheetItem: Identifiable {
 struct PrivacyCover: View {
     var body: some View {
         ZStack {
-            Rectangle().fill(Color.busnesBackground)
+            Rectangle().fill(.themeBackground)
             BrandMark(size: 72)
         }
         .ignoresSafeArea()

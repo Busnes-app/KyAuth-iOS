@@ -47,7 +47,7 @@
 	<!-- Every required-reason API in the app. Re-audit when adding one (KyAuth/AGENTS.md). -->
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
-		<!-- CA92.1: app-only settings (idle lock minutes, appearance, install marker). -->
+		<!-- CA92.1: app-only settings (idle lock minutes, appearance, theme pair, install marker). -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>

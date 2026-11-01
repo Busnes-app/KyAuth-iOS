@@ -119,14 +119,25 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 
 ## Work Guidance
 
-- Native iOS look: system `TabView` (Codes, Settings), forms and lists, Busnes palettes: background
-  `BusnesBackground` (`#f8f6f0` / `#182326`), rows and cards `BusnesSurface` (`#ffffff` /
-  `#1f2b2e`), orange accent (`#bf3f18` / `#f5865f`); text keeps system label colors. Use
-  `BusnesForm`/`BusnesList` instead of `Form`/`List`, `Color.busnesBackground` behind other
-  screens, and `busnesProminentButton()` for filled buttons (`BusnesOnAccent` label: white /
-  `#182326`, since white fails contrast on the dark accent).
-- Appearance setting: System (default, follows iOS), Busnes Light, Busnes Dark, set on the window
-  (`UI/Appearance.swift`). No other themes: Android's other 15 themes are not ported, by decision.
+- Native iOS look: system `TabView` (Codes, Settings), forms and lists, text in system label
+  colors, on the six suite theme pairs of ky-ui 0.11.0 (`THEME_PAIRS`): Busnes (default), Matter,
+  Ocean, Forest, Ky, Nord. Each pair is `<Pair><Role>.colorset` (Background, Surface, Accent,
+  OnAccent, Danger, Warning, Success and their `Soft` tints) with light and dark halves; Busnes's
+  accent is `AccentColor`. `scripts/theme-colorsets.py --write` generates them from values copied
+  from ky-ui; change ky-ui first, never a color set by hand.
+- Use `ThemedForm`/`ThemedList` instead of `Form`/`List`, `.themeBackground` behind other screens,
+  `.themeSurface` for cards and `themedProminentButton()` for filled buttons. Colors come from
+  `ThemeColor`, which reads `\.themePair`, set once on `RootView`.
+- No `.pickerStyle(.navigationLink)`: its pushed list keeps the system background. Push a
+  `ThemedForm` instead (`ThemePickerView`).
+- Appearance setting (`UI/Theme.swift`, applied on the window by `UI/Appearance.swift`): Appearance
+  System (default, follows iOS), Light or Dark, saved as `appearance`, and Theme, a pair, saved as
+  `theme-pair` (ky-ui pair IDs). A saved `light`/`dark` with no pair is the former Busnes Light/Dark
+  and stays Busnes with that half forced; a pair that is not one of the six resets to Busnes
+  following the system. Android's other themes are not ported.
+- States use `StatusLabel` (a word with its icon, in `.themeDanger`, `.themeWarning` or
+  `.themeSuccess`), never color alone; a row that carries a state may use its `Soft` tint. Danger is
+  ky-ui's crimson, never the accent. Destructive buttons and system alerts keep system red.
 - No third-party dependencies. Keep security checks fail-closed and add a focused test for
   non-trivial logic.
 
@@ -156,6 +167,9 @@ protocol cases; strong peer and directly trusted-peer controls must succeed. A
 delegate-free URLSession runs the same strong-curve peers, so a native
 negotiation failure is told apart from the application floor and recorded in
 `docs/native-tls-evidence.md` with its run; neither is skipped or excused.
+`ThemeColourTests` runs ky-ui's status colour gate (`scripts/check-status-colours.mjs`) on the
+compiled color sets; without Xcode, `python3 -I scripts/theme-colorsets.py --check` runs it on the
+JSON and checks every color set matches the script's table.
 Without Xcode, `scripts/check-push-crypto-linux.sh` (Docker) runs `PushCryptoTests` and
 `TotpTests` against swift-crypto with a persistent SwiftPM dependency cache. It does not
 verify Apple CryptoKit, vault/Keychain integration or SwiftUI. The encrypted mixed-legacy
