@@ -170,12 +170,13 @@ struct SettingsRowLabel: View {
 
     var body: some View {
         HStack {
-            Text(title).foregroundStyle(.primary)
+            // Concrete colors: `.primary` here would resolve against the button's accent tint.
+            Text(title).foregroundStyle(Color.primary)
             Spacer()
             if let symbol {
                 Image(systemName: symbol)
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Color(uiColor: .tertiaryLabel))
                     .accessibilityHidden(true)
             }
         }

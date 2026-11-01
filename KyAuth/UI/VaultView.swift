@@ -5,19 +5,20 @@ struct MainTabView: View {
     @State private var tab = MainTab.codes
 
     var body: some View {
-        // The tab bar fills every symbol by default; only the selected tab's icon is filled here.
+        // The tab bar fills every symbol unless its view sets `.none` (the default everywhere else);
+        // only the selected tab names a filled icon.
         TabView(selection: $tab) {
             VaultView()
                 .tabItem {
                     Label("Codes", systemImage: tab == .codes ? "lock.shield.fill" : "lock.shield")
-                        .environment(\.symbolVariants, .none)
                 }
+                .environment(\.symbolVariants, .none)
                 .tag(MainTab.codes)
             SettingsView()
                 .tabItem {
                     Label("Settings", systemImage: tab == .settings ? "gearshape.fill" : "gearshape")
-                        .environment(\.symbolVariants, .none)
                 }
+                .environment(\.symbolVariants, .none)
                 .tag(MainTab.settings)
         }
         // A pairing form that was open when KyAuth locked comes back once it is unlocked.
