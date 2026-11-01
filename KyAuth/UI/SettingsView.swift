@@ -159,13 +159,15 @@ struct ThemePickerView: View {
                 Button { selection = pair } label: {
                     HStack(spacing: 12) {
                         ThemeSwatch(pair: pair)
-                        Text(pair.title).foregroundStyle(.primary)
+                        Text(pair.title)
                         Spacer()
                         if pair == selection {
-                            Image(systemName: "checkmark").fontWeight(.semibold).foregroundStyle(.tint)
+                            Image(systemName: "checkmark").fontWeight(.semibold).foregroundStyle(.themeAccent)
                         }
                     }
                 }
+                // A Form button tints its whole label; only the checkmark takes the accent.
+                .tint(.primary)
                 .accessibilityAddTraits(pair == selection ? .isSelected : [])
             }
         }
