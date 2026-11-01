@@ -31,7 +31,7 @@ struct PairingView: View {
                     entryOptions
                 }
                 Section {
-                    TextField("Device name", text: draft.deviceName)
+                    TextField("Device name", text: draft.deviceName, prompt: Text("Device name").placeholderStyle())
                 } footer: {
                     Text("Shown on the KyIdentity devices page.")
                 }
@@ -80,18 +80,20 @@ struct PairingView: View {
         } footer: {
             Text("Open the KyIdentity devices page and add a device. The code is valid for 90 seconds.")
         }
-        Section("Or Enter the Details") {
-            TextField("Server (https://…)", text: draft.serverUrl)
+        Section {
+            TextField("Server (https://…)", text: draft.serverUrl, prompt: Text("Server (https://…)").placeholderStyle())
                 .keyboardType(.URL)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-            TextField("User ID", text: draft.userId)
+            TextField("User ID", text: draft.userId, prompt: Text("User ID").placeholderStyle())
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-            TextField("Pairing PIN", text: draft.pinCode)
+            TextField("Pairing PIN", text: draft.pinCode, prompt: Text("Pairing PIN").placeholderStyle())
                 .keyboardType(.numberPad)
             Button("Pair") { pairManually() }
                 .disabled(draft.wrappedValue.serverUrl.isBlank || draft.wrappedValue.userId.isBlank || draft.wrappedValue.pinCode.isBlank)
+        } header: {
+            Text("Or enter the details").sectionHeaderStyle()
         }
     }
 

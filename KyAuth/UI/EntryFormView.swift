@@ -26,31 +26,33 @@ struct EntryFormView: View {
     var body: some View {
         NavigationStack {
             ThemedForm {
-                Section("Account") {
-                    TextField("Name", text: $title)
+                Section {
+                    TextField("Name", text: $title, prompt: Text("Name").placeholderStyle())
                         .textInputAutocapitalization(.words)
                     if case .add = mode {
                         // Secure entry: no keyboard learning, suggestions or screen echo of the secret.
-                        SecureField("Setup key", text: $secret)
+                        SecureField("Setup key", text: $secret, prompt: Text("Setup key").placeholderStyle())
                             .textContentType(.oneTimeCode) // never offer to save it as a password
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .font(.body.monospaced())
                             .privacySensitive()
                     }
+                } header: {
+                    Text("Account").sectionHeaderStyle()
                 }
                 Section {
-                    TextField("Website", text: $website)
+                    TextField("Website", text: $website, prompt: Text("Website").placeholderStyle())
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    TextField("Notes", text: $notes, axis: .vertical)
+                    TextField("Notes", text: $notes, prompt: Text("Notes").placeholderStyle(), axis: .vertical)
                         .lineLimit(2...6)
                 } header: {
-                    Text("Optional")
+                    Text("Optional").sectionHeaderStyle()
                 }
                 if case .add = mode {
-                    Section("Advanced") {
+                    Section {
                         Picker("Digits", selection: $digits) {
                             ForEach(6...8, id: \.self) { Text("\($0)") }
                         }
@@ -60,6 +62,8 @@ struct EntryFormView: View {
                         Picker("Algorithm", selection: $algorithm) {
                             ForEach(TotpEntry.Algorithm.allCases, id: \.self) { Text($0.rawValue) }
                         }
+                    } header: {
+                        Text("Advanced").sectionHeaderStyle()
                     }
                 }
                 if let error {

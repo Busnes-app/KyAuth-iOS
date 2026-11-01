@@ -2,13 +2,16 @@ import SwiftUI
 
 struct MainTabView: View {
     @Environment(AppModel.self) private var model
+    @State private var tab = MainTab.codes
 
     var body: some View {
-        TabView {
+        TabView(selection: $tab) {
             VaultView()
-                .tabItem { Label("Codes", systemImage: "lock.shield") }
+                .tabItem { TabLabel(title: "Codes", symbol: "lock.shield", selected: tab == .codes) }
+                .tag(MainTab.codes)
             SettingsView()
-                .tabItem { Label("Settings", systemImage: "gearshape") }
+                .tabItem { TabLabel(title: "Settings", symbol: "gearshape", selected: tab == .settings) }
+                .tag(MainTab.settings)
         }
         // A pairing form that was open when KyAuth locked comes back once it is unlocked.
         .sheet(isPresented: Binding(get: { model.resumePairing }, set: { if !$0 { model.pairingFormClosed() } })) {
@@ -75,7 +78,7 @@ struct VaultView: View {
                     }
                 }
             }
-            .searchable(text: $search, prompt: "Search codes")
+            .searchable(text: $search, prompt: Text("Search codes").placeholderStyle())
             .navigationTitle("Codes")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -117,6 +120,26 @@ struct VaultView: View {
         guard !query.isEmpty else { return model.entries }
         return model.entries.filter {
             $0.title.localizedCaseInsensitiveContains(query) || ($0.issuer ?? "").localizedCaseInsensitiveContains(query)
+        }
+    }
+}
+
+enum MainTab {
+    case codes, settings
+}
+
+/// A tab item whose icon is outline unless selected. The iOS 26 tab bar fills every SF Symbol
+/// and ignores `symbolVariants`, so the icon is handed over as a template `UIImage`.
+private struct TabLabel: View {
+    let title: LocalizedStringKey
+    let symbol: String
+    let selected: Bool
+
+    var body: some View {
+        Label {
+            Text(title)
+        } icon: {
+            Image(uiImage: UIImage(systemName: selected ? symbol + ".fill" : symbol)!.withRenderingMode(.alwaysTemplate))
         }
     }
 }
@@ -166,7 +189,7 @@ struct TotpRow: View {
                 HStack(spacing: 14) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(entry.title)
-                            .font(.subheadline)
+                            .font(.subheadline.weight(.medium))
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                         Text(code.map(TotpGenerator.formatted) ?? "Unavailable")
