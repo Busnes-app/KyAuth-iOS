@@ -137,9 +137,9 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   solid on iOS 26, with `.tabItem` or `Tab`; the cause is not known.
 - No `.pickerStyle(.navigationLink)`: its pushed list keeps the system background. Push a
   `ThemedForm` instead (`ThemePickerView`).
-- Appearance setting (`UI/Theme.swift`, applied on the window by `UI/Appearance.swift`): Appearance
-  System (default, follows iOS), Light or Dark, saved as `appearance`, and Theme, a pair, saved as
-  `theme-pair` (ky-ui pair IDs). A saved `light`/`dark` with no pair is the former Busnes Light/Dark
+- Appearance setting (`UI/Theme.swift`, applied on the window by `UI/Appearance.swift`): the row
+  "Light or dark" (System, default, follows iOS; Light; Dark), saved as `appearance`, and Theme,
+  a pair, saved as `theme-pair` (ky-ui pair IDs). A saved `light`/`dark` with no pair is the former Busnes Light/Dark
   and stays Busnes with that half forced; a pair that is not one of the six resets to Busnes
   following the system. Android's other themes are not ported.
 - States use `StatusLabel` (a word with its icon, in `.themeDanger`, `.themeWarning` or

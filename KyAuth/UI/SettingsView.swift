@@ -63,7 +63,7 @@ struct SettingsView: View {
                     }
                 }
                 Section {
-                    Picker("Appearance", selection: $model.appearance) {
+                    Picker("Light or dark", selection: $model.appearance) {
                         ForEach(Appearance.allCases) { Text($0.title).tag($0) }
                     }
                     // Not a `.navigationLink` picker: its pushed list keeps the system background.
