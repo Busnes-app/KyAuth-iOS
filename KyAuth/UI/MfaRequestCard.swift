@@ -34,14 +34,14 @@ struct MfaRequestCard: View {
                         .foregroundStyle(.tint)
                 }
                 if expired {
-                    Text("This request expired.")
+                    StatusLabel("This request expired.", .warning)
                     Button("Dismiss") { model.dismissExpiredChallenge() }
                 } else {
                     typedApproval
                 }
             }
             .padding()
-            .background(Color.busnesSurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(.themeSurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .disabled(working)
     }
@@ -60,7 +60,7 @@ struct MfaRequestCard: View {
                     digits = String(value.filter(\.isNumber).prefix(2))
                 }
                 .padding(.vertical, 6)
-                .background(Color.busnesBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(.themeBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .accessibilityLabel("Two-digit number")
             answerButtons(approveDisabled: !MfaMessage.isTwoDigits(digits)) { digits }
         }
@@ -79,7 +79,7 @@ struct MfaRequestCard: View {
             } label: {
                 Text("Approve").frame(maxWidth: .infinity)
             }
-            .busnesProminentButton()
+            .themedProminentButton()
             .disabled(approveDisabled)
         }
         .controlSize(.large)

@@ -25,7 +25,7 @@ struct EntryFormView: View {
 
     var body: some View {
         NavigationStack {
-            BusnesForm {
+            ThemedForm {
                 Section("Account") {
                     TextField("Name", text: $title)
                         .textInputAutocapitalization(.words)
@@ -63,7 +63,7 @@ struct EntryFormView: View {
                     }
                 }
                 if let error {
-                    Section { Text(error).foregroundStyle(.red) }
+                    Section { StatusLabel(error, .danger) }
                 }
             }
             .navigationTitle(navigationTitle)

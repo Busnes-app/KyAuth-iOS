@@ -12,7 +12,7 @@ struct SettingsView: View {
     var body: some View {
         @Bindable var model = model
         NavigationStack {
-            BusnesForm {
+            ThemedForm {
                 if model.isDemo {
                     Section {
                         Button("Exit Demo") { model.lock() }
@@ -26,7 +26,7 @@ struct SettingsView: View {
                 }
                 if model.isPaired {
                     Section {
-                        LabeledContent("Notifications", value: notificationText)
+                        LabeledContent("Notifications") { notificationStatusView }
                         if notificationStatus == .denied {
                             Button("Open Settings") {
                                 UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!)
@@ -64,8 +64,20 @@ struct SettingsView: View {
                     Picker("Appearance", selection: $model.appearance) {
                         ForEach(Appearance.allCases) { Text($0.title).tag($0) }
                     }
+                    Picker("Theme", selection: $model.themePair) {
+                        ForEach(ThemePair.allCases) { pair in
+                            HStack(spacing: 12) {
+                                ThemeSwatch(pair: pair)
+                                Text(pair.title)
+                            }
+                            .tag(pair)
+                        }
+                    }
+                    .pickerStyle(.navigationLink)
+                } header: {
+                    Text("Appearance")
                 } footer: {
-                    Text("System switches between Busnes Light and Busnes Dark with this device's setting.")
+                    Text("Each theme has a light and a dark version. System switches between them with this device's setting.")
                 }
                 Section {
                     LabeledContent("Version", value: Bundle.main.versionString)
@@ -126,11 +138,12 @@ struct SettingsView: View {
         }
     }
 
-    private var notificationText: String {
+    @ViewBuilder
+    private var notificationStatusView: some View {
         switch notificationStatus {
-        case .authorized, .provisional, .ephemeral: "On"
-        case .denied: "Off"
-        default: "Not set"
+        case .authorized, .provisional, .ephemeral: StatusLabel("On", .success)
+        case .denied: StatusLabel("Off", .warning)
+        default: Text("Not set")
         }
     }
 }
@@ -142,7 +155,7 @@ struct LicenseView: View {
                 .font(.footnote.monospaced())
                 .padding()
         }
-        .background(Color.busnesBackground)
+        .background(.themeBackground)
         .navigationTitle("License")
     }
 
@@ -171,7 +184,7 @@ struct PinSetupView: View {
 
     var body: some View {
         NavigationStack {
-            BusnesForm {
+            ThemedForm {
                 Section {
                     SecureField("New PIN", text: $pin)
                         .keyboardType(.numberPad)
@@ -179,7 +192,7 @@ struct PinSetupView: View {
                         .keyboardType(.numberPad)
                 } footer: {
                     if let error {
-                        Text(error).foregroundStyle(.red)
+                        StatusLabel(error, .danger)
                     } else {
                         Text("\(PinPolicy.minLength) to \(PinPolicy.maxLength) digits. Avoid common or sequential numbers.")
                     }

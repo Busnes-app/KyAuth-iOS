@@ -56,6 +56,12 @@ final class AppModel {
         didSet { UserDefaults.standard.set(appearance.rawValue, forKey: Appearance.defaultsKey) }
     }
 
+    var themePair: ThemePair {
+        didSet { UserDefaults.standard.set(themePair.rawValue, forKey: ThemePair.defaultsKey) }
+    }
+
+    var theme: ThemeChoice { ThemeChoice(pair: themePair, appearance: appearance) }
+
     private var vaultKey: SymmetricKey?
     private var pinContext: LAContext?
     private var idleLock = IdleLock()
@@ -79,7 +85,9 @@ final class AppModel {
         self.pushState = pushState
         self.makeHandoff = makeHandoff
         idleMinutes = IdleLock.validatedMinutes(UserDefaults.standard.integer(forKey: "idle-minutes"))
-        appearance = Appearance(stored: UserDefaults.standard.string(forKey: Appearance.defaultsKey))
+        let theme = ThemeChoice(defaults: .standard)
+        appearance = theme.appearance
+        themePair = theme.pair
     }
 
     // MARK: - Lock
@@ -606,6 +614,7 @@ final class AppModel {
         pinEnabled = false
         idleMinutes = IdleLock.defaultMinutes
         appearance = .system
+        themePair = .busnes
         UIApplication.shared.registerForRemoteNotifications()
     }
 

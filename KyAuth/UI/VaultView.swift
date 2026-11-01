@@ -25,10 +25,11 @@ struct VaultView: View {
 
     var body: some View {
         NavigationStack {
-            BusnesList {
+            ThemedList {
                 if model.needsPushRefresh {
                     Section {
                         ReconnectBanner()
+                            .listRowBackground(Rectangle().fill(.themeWarningSoft))
                     }
                 }
                 if let challenge = model.pendingChallenge {
@@ -40,8 +41,8 @@ struct VaultView: View {
                 }
                 if let error = model.vaultError {
                     Section {
-                        Label(error, systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(.red)
+                        StatusLabel(error, .danger)
+                            .listRowBackground(Rectangle().fill(.themeDangerSoft))
                     }
                 }
                 Section {
@@ -67,7 +68,7 @@ struct VaultView: View {
                         Text("Add an account by scanning its setup QR code or entering its key.")
                     } actions: {
                         Button("Scan QR Code") { sheet = .scan }
-                            .busnesProminentButton()
+                            .themedProminentButton()
                         if !model.isPaired && !model.isDemo {
                             Button("Explore the Demo") { model.startDemo() }
                         }
@@ -139,11 +140,12 @@ struct ReconnectBanner: View {
         VStack(alignment: .leading, spacing: 8) {
             Label("Sign-in requests paused", systemImage: "bell.slash")
                 .font(.headline)
+                .foregroundStyle(.themeWarning)
             Text("Apple gave KyAuth a new push address. Reconnect so KyIdentity can reach this device.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             Button("Reconnect") { Task { await model.reconnectPush() } }
-                .busnesProminentButton()
+                .themedProminentButton()
         }
         .padding(.vertical, 4)
     }
@@ -169,7 +171,7 @@ struct TotpRow: View {
                             .lineLimit(1)
                         Text(code.map(TotpGenerator.formatted) ?? "Unavailable")
                             .font(.system(.title, design: .rounded).monospacedDigit().weight(.semibold))
-                            .foregroundStyle(remaining <= 5 ? Color.red : Color.primary)
+                            .foregroundStyle(remaining <= 5 ? AnyShapeStyle(ThemeColor.themeWarning) : AnyShapeStyle(Color.primary))
                             .contentTransition(.numericText())
                         if code == nil {
                             Text("Set up this account again at its service using a new key. Keep your recovery codes until it works.")
@@ -203,7 +205,7 @@ struct CountdownRing: View {
             Circle().stroke(.quaternary, lineWidth: 3)
             Circle()
                 .trim(from: 0, to: CGFloat(remaining) / CGFloat(period))
-                .stroke(remaining <= 5 ? Color.red : Color.accentColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                .stroke(remaining <= 5 ? ThemeColor.themeWarning : .themeAccent, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .animation(.linear(duration: 1), value: remaining)
             Text("\(remaining)")

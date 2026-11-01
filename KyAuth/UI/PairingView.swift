@@ -20,7 +20,7 @@ struct PairingView: View {
 
     var body: some View {
         NavigationStack {
-            BusnesForm {
+            ThemedForm {
                 if let scanned = draft.wrappedValue.scanned {
                     Section {
                         Button("Pair with \(URL(string: scanned.serverUrl)?.host() ?? scanned.serverUrl)") { run(scanned) }
@@ -36,7 +36,7 @@ struct PairingView: View {
                     Text("Shown on the KyIdentity devices page.")
                 }
                 if let error {
-                    Section { Text(error).foregroundStyle(.red) }
+                    Section { StatusLabel(error, .danger) }
                 }
             }
             .disabled(working)
@@ -166,7 +166,7 @@ struct SignOnSheet: View {
                     } label: {
                         Text("Sign In").frame(maxWidth: .infinity)
                     }
-                    .busnesProminentButton()
+                    .themedProminentButton()
                     Button("Cancel", role: .cancel) { model.cancelSignOn() }
                 }
                 .controlSize(.large)
@@ -174,7 +174,7 @@ struct SignOnSheet: View {
             }
             .padding(24)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.busnesBackground)
+            .background(.themeBackground)
             .navigationTitle("Sign in with KyIdentity")
             .navigationBarTitleDisplayMode(.inline)
         }
