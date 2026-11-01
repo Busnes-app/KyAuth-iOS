@@ -15,5 +15,13 @@
 			</array>
 		</dict>
 	</array>
+	<!-- Space Grotesk, the suite face (UI/AppFont.swift); SpaceGrotesk-OFL.txt is its license. -->
+	<key>UIAppFonts</key>
+	<array>
+		<string>SpaceGrotesk-Regular.ttf</string>
+		<string>SpaceGrotesk-Medium.ttf</string>
+		<string>SpaceGrotesk-SemiBold.ttf</string>
+		<string>SpaceGrotesk-Bold.ttf</string>
+	</array>
 </dict>
 </plist>

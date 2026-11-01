@@ -15,11 +15,11 @@ struct SettingsView: View {
             ThemedForm {
                 if model.isDemo {
                     Section {
-                        Button("Exit Demo") { model.lock() }
+                        Button("Exit demo") { model.lock() }
                     } header: {
                         Text("Demo mode").sectionHeaderStyle()
                     } footer: {
-                        Text("Codes and sign-in requests here are simulated and kept in memory: none are saved or sent anywhere. Exit the demo to pair with KyIdentity.")
+                        Text("Codes and sign-in requests here are simulated and kept in memory: none are saved or sent anywhere. Exit the demo to pair with KyIdentity.").sectionFooterStyle()
                     }
                 } else {
                     kyIdentitySection
@@ -35,35 +35,35 @@ struct SettingsView: View {
                             }
                         }
                         if model.needsPushRefresh {
-                            Button { Task { await model.reconnectPush() } } label: { SettingsRowLabel("Reconnect Sign-in Requests") }
+                            Button { Task { await model.reconnectPush() } } label: { SettingsRowLabel("Reconnect sign-in requests") }
                         }
                     } header: {
                         Text("Sign-in requests").sectionHeaderStyle()
                     } footer: {
-                        Text("KyIdentity sends sign-in requests to this device through Apple Push.")
+                        Text("KyIdentity sends sign-in requests to this device through Apple Push.").sectionFooterStyle()
                     }
                 }
                 if !model.isDemo {
                     Section {
-                        Picker("Auto-Lock", selection: $model.idleMinutes) {
+                        Picker("Auto-lock", selection: $model.idleMinutes) {
                             ForEach(IdleLock.minuteChoices, id: \.self) { minutes in
                                 Text(minutes == 60 ? "1 hour" : "\(minutes) minute\(minutes == 1 ? "" : "s")")
                             }
                         }
                         if model.pinEnabled {
                             Button { showPinSetup = true } label: { SettingsRowLabel("Change PIN", trailing: .chevron) }
-                            Button("Turn Off PIN", role: .destructive) { model.removePin() }
+                            Button("Turn off PIN", role: .destructive) { model.removePin() }
                         } else {
                             Button { showPinSetup = true } label: { SettingsRowLabel("Set a PIN", trailing: .chevron) }
                         }
                     } header: {
                         Text("Security").sectionHeaderStyle()
                     } footer: {
-                        Text("KyAuth locks when you leave it, and after the auto-lock time in the app. A PIN is asked after \(UserPresence.biometryName). Five wrong PINs erase KyAuth's data on this device.")
+                        Text("KyAuth locks when you leave it, and after the auto-lock time in the app. A PIN is asked after \(UserPresence.biometryName). Five wrong PINs erase KyAuth's data on this device.").sectionFooterStyle()
                     }
                 }
                 Section {
-                    Picker("Appearance", selection: $model.appearance) {
+                    Picker("Light or dark", selection: $model.appearance) {
                         ForEach(Appearance.allCases) { Text($0.title).tag($0) }
                     }
                     // Not a `.navigationLink` picker: its pushed list keeps the system background.
@@ -80,25 +80,25 @@ struct SettingsView: View {
                 } header: {
                     Text("Appearance").sectionHeaderStyle()
                 } footer: {
-                    Text("Each theme has a light and a dark version. System switches between them with this device's setting.")
+                    Text("Each theme has a light and a dark version. System switches between them with this device's setting.").sectionFooterStyle()
                 }
                 Section {
                     LabeledContent("Version", value: Bundle.main.versionString)
                     Link(destination: URL(string: "https://github.com/Busnes-app/KyAuth-iOS")!) {
-                        SettingsRowLabel("Source Code", trailing: .external)
+                        SettingsRowLabel("Source code", trailing: .external)
                     }
                     NavigationLink("License") { LicenseView() }
                     Link(destination: URL(string: "https://busnes.app/privacy.html")!) {
-                        SettingsRowLabel("Privacy Policy", trailing: .external)
+                        SettingsRowLabel("Privacy policy", trailing: .external)
                     }
                 } header: {
                     Text("About").sectionHeaderStyle()
                 } footer: {
-                    Text("Codes are stored only on this device, encrypted, with no backup or sync. If you lose the device, use your KyIdentity recovery codes.")
+                    Text("Codes are stored only on this device, encrypted, with no backup or sync. If you lose the device, use your KyIdentity recovery codes.").sectionFooterStyle()
                 }
                 if !model.isDemo {
                     Section {
-                        Button("Erase All Data", role: .destructive) { confirmErase = true }
+                        Button("Erase all data", role: .destructive) { confirmErase = true }
                     }
                 }
             }
@@ -131,7 +131,7 @@ struct SettingsView: View {
                         .multilineTextAlignment(.trailing)
                 }
                 LabeledContent("Sign in to apps", value: account.canSignOn ? "On" : "Off")
-                Button { showPairing = true } label: { SettingsRowLabel("Pair Again", trailing: .chevron) }
+                Button { showPairing = true } label: { SettingsRowLabel("Pair again", trailing: .chevron) }
                 Button("Unpair", role: .destructive) { confirmUnpair = true }
             } else {
                 Button { showPairing = true } label: { SettingsRowLabel("Pair with KyIdentity", trailing: .chevron) }
@@ -139,9 +139,12 @@ struct SettingsView: View {
         } header: {
             Text("KyIdentity").sectionHeaderStyle()
         } footer: {
-            if model.account?.canSignOn == false {
-                Text("To let suite apps such as KyPost sign in through this device, turn on sign-in for this device on the KyIdentity devices page, then pair again.")
+            Group {
+                if model.account?.canSignOn == false {
+                    Text("To let suite apps such as KyPost sign in through this device, turn on sign-in for this device on the KyIdentity devices page, then pair again.")
+                }
             }
+            .sectionFooterStyle()
         }
     }
 
@@ -155,7 +158,7 @@ struct SettingsView: View {
     }
 }
 
-/// A Settings row title in ink, so the accent marks only Exit Demo. A chevron means it opens a
+/// A Settings row title in ink, so the accent marks only Exit demo. A chevron means it opens a
 /// sheet or screen, an arrow that it leaves KyAuth.
 struct SettingsRowLabel: View {
     enum Trailing { case none, chevron, external }
@@ -261,11 +264,14 @@ struct PinSetupView: View {
                     SecureField("Confirm PIN", text: $confirmation, prompt: Text("Confirm PIN").placeholderStyle())
                         .keyboardType(.numberPad)
                 } footer: {
-                    if let error {
-                        StatusLabel(error, .danger)
-                    } else {
-                        Text("\(PinPolicy.minLength) to \(PinPolicy.maxLength) digits. Avoid common or sequential numbers.")
+                    Group {
+                        if let error {
+                            StatusLabel(error, .danger)
+                        } else {
+                            Text("\(PinPolicy.minLength) to \(PinPolicy.maxLength) digits. Avoid common or sequential numbers.")
+                        }
                     }
+                    .sectionFooterStyle()
                 }
             }
             .navigationTitle("KyAuth PIN")

@@ -78,7 +78,7 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 - Only an absent vault file loads as empty; an empty or unreadable file is an error and saving
   stays disabled, so a write can never replace entries that failed to load.
 - A vault file whose key is gone (the passcode was removed) is never given a new key: it unlocks
-  with no codes, saving disabled and the reason shown, so Erase All Data stays reachable.
+  with no codes, saving disabled and the reason shown, so Erase all data stays reachable.
 - The Codes tab scanner (`ScannedCode`) adds `otpauth://` accounts and hands a KyIdentity pairing
   code to `PairingView(scanned:)`, which pairs only after a tap (pairing replaces the device key).
 - The pairing form's contents (`AppModel.pairingDraft`, memory only) survive a lock, and the form
@@ -108,7 +108,7 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   codes and a simulated request every 15 s with `.invalid` server, held in memory. With no browser,
   the card names the number to type as demo text, kept in `AppModel` and never in the request. It needs no Face
   ID, reads and writes no vault, Keychain, pairing or network; Settings hides PIN, auto-lock, pairing
-  and erase. Any lock (background, idle, Lock, Exit Demo) ends it.
+  and erase. Any lock (background, idle, Lock, Exit demo) ends it.
 - The lock screen prompts for Face ID on its own only when paired or a vault file exists; a fresh
   install waits for a tap, so Try Demo is reachable without a passcode prompt.
 - `docs/ASSURANCE-CASE.md` argues that these contracts meet KyAuth's security requirements, with
@@ -128,18 +128,24 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 - Use `ThemedForm`/`ThemedList` instead of `Form`/`List`, `.themeBackground` behind other screens,
   `.themeSurface` for cards and `themedProminentButton()` for filled buttons. Colors come from
   `ThemeColor`, which reads `\.themePair`, set once on `RootView`.
-- Section headers are sentence case with `.sectionHeaderStyle()`; field prompts use
+- Type is Space Grotesk, the suite face (`UI/AppFont.swift`, `Resources/Fonts`, `UIAppFonts`, its
+  OFL beside the TTFs): `AppFont.ui(textStyle, weight:)` for text, which follows Dynamic Type, set as
+  the default on `RootView`; `AppFont.applyToUIKit()` covers navigation titles, bar buttons and tab
+  labels. Codes and countdowns add `.monospacedDigit()`; the setup key and the license stay system
+  monospaced. System alerts and confirmation dialogs keep the system face.
+- Section headers and Settings rows are sentence case ("Exit demo", "Source code"); section
+  headers use `.sectionHeaderStyle()` and footers `.sectionFooterStyle()`; field prompts use
   `.placeholderStyle()` (both ink at 60%, at least 4.5:1 on every half). Settings rows are ink
   (`SettingsRowLabel`): a chevron when they open a sheet or screen, `arrow.up.right` when they
-  leave KyAuth. The accent marks only Exit Demo; destructive rows stay system red.
+  leave KyAuth. The accent marks only Exit demo; destructive rows stay system red.
 - Tab icons name the outline symbol unless selected (`TabLabel`, template `UIImage`s: the iOS 26
   tab bar fills SF Symbols and ignores `symbolVariants`). The inactive Settings gear still draws
   solid on iOS 26, with `.tabItem` or `Tab`; the cause is not known.
 - No `.pickerStyle(.navigationLink)`: its pushed list keeps the system background. Push a
   `ThemedForm` instead (`ThemePickerView`).
-- Appearance setting (`UI/Theme.swift`, applied on the window by `UI/Appearance.swift`): Appearance
-  System (default, follows iOS), Light or Dark, saved as `appearance`, and Theme, a pair, saved as
-  `theme-pair` (ky-ui pair IDs). A saved `light`/`dark` with no pair is the former Busnes Light/Dark
+- Appearance setting (`UI/Theme.swift`, applied on the window by `UI/Appearance.swift`): the row
+  "Light or dark" (System, default, follows iOS; Light; Dark), saved as `appearance`, and Theme,
+  a pair, saved as `theme-pair` (ky-ui pair IDs). A saved `light`/`dark` with no pair is the former Busnes Light/Dark
   and stays Busnes with that half forced; a pair that is not one of the six resets to Busnes
   following the system. Android's other themes are not ported.
 - States use `StatusLabel` (a word with its icon, in `.themeDanger`, `.themeWarning` or

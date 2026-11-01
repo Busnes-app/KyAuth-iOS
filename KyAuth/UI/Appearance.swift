@@ -81,6 +81,12 @@ struct ThemedList<Content: View>: View {
 }
 
 extension View {
+    /// A grouped-list section footer: footnote in the suite face. Without it the footer takes
+    /// `RootView`'s body-size default.
+    func sectionFooterStyle() -> some View {
+        font(AppFont.ui(.footnote))
+    }
+
     /// `.borderedProminent` with the theme's label color on its accent (dark text on dark-half
     /// accents, where white would fail contrast).
     func themedProminentButton() -> some View {
@@ -92,7 +98,7 @@ extension Text {
     /// A grouped-list section header: footnote, semibold, ink at 60% (4.5:1 or better), in the case
     /// it is written in. iOS 26's default header is nearly body size and competes with its rows.
     func sectionHeaderStyle() -> some View {
-        font(.footnote.weight(.semibold)).foregroundStyle(Color.primary.opacity(0.6)).textCase(nil)
+        font(AppFont.ui(.footnote, weight: .semibold)).foregroundStyle(Color.primary.opacity(0.6)).textCase(nil)
     }
 
     /// A text field placeholder in ink at 60%, at least 4.5:1 on every pair's surface; the

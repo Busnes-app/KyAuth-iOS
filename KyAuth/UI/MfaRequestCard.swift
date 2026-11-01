@@ -15,22 +15,22 @@ struct MfaRequestCard: View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     Label(challenge.purposeText, systemImage: "person.badge.shield.checkmark")
-                        .font(.headline)
+                        .font(AppFont.ui(.headline, weight: .semibold))
                     Spacer()
                     if !expired {
                         Text("\(challenge.secondsRemaining(now: context.date))s")
-                            .font(.subheadline.monospacedDigit())
+                            .font(AppFont.ui(.subheadline).monospacedDigit())
                             .foregroundStyle(.secondary)
                     }
                 }
                 if let host = URL(string: challenge.serverUrl)?.host() {
                     Text(challenge.username.map { "\($0) at \(host)" } ?? host)
-                        .font(.subheadline)
+                        .font(AppFont.ui(.subheadline))
                         .foregroundStyle(.secondary)
                 }
                 if let digits = model.demoBrowserDigits, !expired {
                     Text("Demo: the sign-in screen shows \(digits).")
-                        .font(.subheadline.weight(.medium))
+                        .font(AppFont.ui(.subheadline, weight: .medium))
                         .foregroundStyle(.tint)
                 }
                 if expired {
@@ -49,11 +49,11 @@ struct MfaRequestCard: View {
     private var typedApproval: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Enter the number shown on the sign-in screen.")
-                .font(.subheadline)
+                .font(AppFont.ui(.subheadline))
             TextField("00", text: $digits)
                 .keyboardType(.numberPad)
                 .textContentType(.oneTimeCode)
-                .font(.largeTitle.monospacedDigit().weight(.semibold))
+                .font(AppFont.ui(.largeTitle, weight: .semibold).monospacedDigit())
                 .multilineTextAlignment(.center)
                 .focused($digitsFocused)
                 .onChange(of: digits) { _, value in

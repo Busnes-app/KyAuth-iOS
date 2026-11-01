@@ -25,7 +25,7 @@ struct PairingView: View {
                     Section {
                         Button("Pair with \(URL(string: scanned.serverUrl)?.host() ?? scanned.serverUrl)") { run(scanned) }
                     } footer: {
-                        Text("A KyIdentity pairing code was scanned. It is valid for 90 seconds.")
+                        Text("A KyIdentity pairing code was scanned. It is valid for 90 seconds.").sectionFooterStyle()
                     }
                 } else {
                     entryOptions
@@ -33,7 +33,7 @@ struct PairingView: View {
                 Section {
                     TextField("Device name", text: draft.deviceName, prompt: Text("Device name").placeholderStyle())
                 } footer: {
-                    Text("Shown on the KyIdentity devices page.")
+                    Text("Shown on the KyIdentity devices page.").sectionFooterStyle()
                 }
                 if let error {
                     Section { StatusLabel(error, .danger) }
@@ -78,7 +78,7 @@ struct PairingView: View {
             Button("Scan Pairing QR Code", systemImage: "qrcode.viewfinder") { scanning = true }
             Button("Paste Pairing Link", systemImage: "doc.on.clipboard") { pasteLink() }
         } footer: {
-            Text("Open the KyIdentity devices page and add a device. The code is valid for 90 seconds.")
+            Text("Open the KyIdentity devices page and add a device. The code is valid for 90 seconds.").sectionFooterStyle()
         }
         Section {
             TextField("Server (https://…)", text: draft.serverUrl, prompt: Text("Server (https://…)").placeholderStyle())
@@ -158,7 +158,7 @@ struct SignOnSheet: View {
                     .foregroundStyle(.tint)
                     .padding(.top, 32)
                 Text(message)
-                    .font(.title3)
+                    .font(AppFont.ui(.title3))
                     .multilineTextAlignment(.center)
                 Spacer()
                 VStack(spacing: 12) {

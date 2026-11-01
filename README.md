@@ -102,7 +102,8 @@ not evidence of live push or security qualification. Design contracts are in `do
 
 ## License
 
-[MIT](LICENSE.txt).
+[MIT](LICENSE.txt). The bundled Space Grotesk font is under the SIL Open Font License 1.1
+([SpaceGrotesk-OFL.txt](KyAuth/Resources/Fonts/SpaceGrotesk-OFL.txt)).
 
 [![OctoCounts](https://api.octocounts.com/badge/Busnes-app/KyAuth-iOS/branch/master)](https://octocounts.com/github/Busnes-app/KyAuth-iOS/tree/master)
 
