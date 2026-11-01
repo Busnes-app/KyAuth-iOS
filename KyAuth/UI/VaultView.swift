@@ -2,13 +2,23 @@ import SwiftUI
 
 struct MainTabView: View {
     @Environment(AppModel.self) private var model
+    @State private var tab = MainTab.codes
 
     var body: some View {
-        TabView {
+        // The tab bar fills every symbol by default; only the selected tab's icon is filled here.
+        TabView(selection: $tab) {
             VaultView()
-                .tabItem { Label("Codes", systemImage: "lock.shield") }
+                .tabItem {
+                    Label("Codes", systemImage: tab == .codes ? "lock.shield.fill" : "lock.shield")
+                        .environment(\.symbolVariants, .none)
+                }
+                .tag(MainTab.codes)
             SettingsView()
-                .tabItem { Label("Settings", systemImage: "gearshape") }
+                .tabItem {
+                    Label("Settings", systemImage: tab == .settings ? "gearshape.fill" : "gearshape")
+                        .environment(\.symbolVariants, .none)
+                }
+                .tag(MainTab.settings)
         }
         // A pairing form that was open when KyAuth locked comes back once it is unlocked.
         .sheet(isPresented: Binding(get: { model.resumePairing }, set: { if !$0 { model.pairingFormClosed() } })) {
@@ -75,7 +85,7 @@ struct VaultView: View {
                     }
                 }
             }
-            .searchable(text: $search, prompt: "Search codes")
+            .searchable(text: $search, prompt: Text("Search codes").placeholderStyle())
             .navigationTitle("Codes")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -119,6 +129,10 @@ struct VaultView: View {
             $0.title.localizedCaseInsensitiveContains(query) || ($0.issuer ?? "").localizedCaseInsensitiveContains(query)
         }
     }
+}
+
+enum MainTab {
+    case codes, settings
 }
 
 enum VaultSheet: Identifiable {
@@ -166,7 +180,7 @@ struct TotpRow: View {
                 HStack(spacing: 14) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(entry.title)
-                            .font(.subheadline)
+                            .font(.subheadline.weight(.medium))
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                         Text(code.map(TotpGenerator.formatted) ?? "Unavailable")

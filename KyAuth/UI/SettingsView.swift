@@ -17,7 +17,7 @@ struct SettingsView: View {
                     Section {
                         Button("Exit Demo") { model.lock() }
                     } header: {
-                        Text("Demo Mode")
+                        Text("Demo mode")
                     } footer: {
                         Text("Codes and sign-in requests here are simulated and kept in memory: none are saved or sent anywhere. Exit the demo to pair with KyIdentity.")
                     }
@@ -28,15 +28,17 @@ struct SettingsView: View {
                     Section {
                         LabeledContent("Notifications") { notificationStatusView }
                         if notificationStatus == .denied {
-                            Button("Open Settings") {
+                            Button {
                                 UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!)
+                            } label: {
+                                SettingsRowLabel("Open Settings", trailing: .external)
                             }
                         }
                         if model.needsPushRefresh {
-                            Button("Reconnect Sign-in Requests") { Task { await model.reconnectPush() } }
+                            Button { Task { await model.reconnectPush() } } label: { SettingsRowLabel("Reconnect Sign-in Requests") }
                         }
                     } header: {
-                        Text("Sign-in Requests")
+                        Text("Sign-in requests")
                     } footer: {
                         Text("KyIdentity sends sign-in requests to this device through Apple Push.")
                     }
@@ -49,10 +51,10 @@ struct SettingsView: View {
                             }
                         }
                         if model.pinEnabled {
-                            Button("Change PIN") { showPinSetup = true }
+                            Button { showPinSetup = true } label: { SettingsRowLabel("Change PIN", trailing: .chevron) }
                             Button("Turn Off PIN", role: .destructive) { model.removePin() }
                         } else {
-                            Button("Set a PIN") { showPinSetup = true }
+                            Button { showPinSetup = true } label: { SettingsRowLabel("Set a PIN", trailing: .chevron) }
                         }
                     } header: {
                         Text("Security")
@@ -82,9 +84,13 @@ struct SettingsView: View {
                 }
                 Section {
                     LabeledContent("Version", value: Bundle.main.versionString)
-                    Link("Source Code", destination: URL(string: "https://github.com/Busnes-app/KyAuth-iOS")!)
+                    Link(destination: URL(string: "https://github.com/Busnes-app/KyAuth-iOS")!) {
+                        SettingsRowLabel("Source Code", trailing: .external)
+                    }
                     NavigationLink("License") { LicenseView() }
-                    Link("Privacy Policy", destination: URL(string: "https://busnes.app/privacy.html")!)
+                    Link(destination: URL(string: "https://busnes.app/privacy.html")!) {
+                        SettingsRowLabel("Privacy Policy", trailing: .external)
+                    }
                 } header: {
                     Text("About")
                 } footer: {
@@ -125,10 +131,10 @@ struct SettingsView: View {
                         .multilineTextAlignment(.trailing)
                 }
                 LabeledContent("Sign in to apps", value: account.canSignOn ? "On" : "Off")
-                Button("Pair Again") { showPairing = true }
+                Button { showPairing = true } label: { SettingsRowLabel("Pair Again", trailing: .chevron) }
                 Button("Unpair", role: .destructive) { confirmUnpair = true }
             } else {
-                Button("Pair with KyIdentity") { showPairing = true }
+                Button { showPairing = true } label: { SettingsRowLabel("Pair with KyIdentity", trailing: .chevron) }
             }
         } header: {
             Text("KyIdentity")
@@ -145,6 +151,41 @@ struct SettingsView: View {
         case .authorized, .provisional, .ephemeral: StatusLabel("On", .success)
         case .denied: StatusLabel("Off", .warning)
         default: Text("Not set")
+        }
+    }
+}
+
+/// A Settings row title in ink, so the accent marks only Exit Demo. A chevron means it opens a
+/// sheet or screen, an arrow that it leaves KyAuth.
+struct SettingsRowLabel: View {
+    enum Trailing { case none, chevron, external }
+
+    let title: LocalizedStringKey
+    let trailing: Trailing
+
+    init(_ title: LocalizedStringKey, trailing: Trailing = .none) {
+        self.title = title
+        self.trailing = trailing
+    }
+
+    var body: some View {
+        HStack {
+            Text(title).foregroundStyle(.primary)
+            Spacer()
+            if let symbol {
+                Image(systemName: symbol)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
+            }
+        }
+    }
+
+    private var symbol: String? {
+        switch trailing {
+        case .none: nil
+        case .chevron: "chevron.right"
+        case .external: "arrow.up.right"
         }
     }
 }
@@ -214,9 +255,9 @@ struct PinSetupView: View {
         NavigationStack {
             ThemedForm {
                 Section {
-                    SecureField("New PIN", text: $pin)
+                    SecureField("New PIN", text: $pin, prompt: Text("New PIN").placeholderStyle())
                         .keyboardType(.numberPad)
-                    SecureField("Confirm PIN", text: $confirmation)
+                    SecureField("Confirm PIN", text: $confirmation, prompt: Text("Confirm PIN").placeholderStyle())
                         .keyboardType(.numberPad)
                 } footer: {
                     if let error {

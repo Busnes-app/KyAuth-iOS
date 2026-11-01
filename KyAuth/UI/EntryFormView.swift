@@ -27,11 +27,11 @@ struct EntryFormView: View {
         NavigationStack {
             ThemedForm {
                 Section("Account") {
-                    TextField("Name", text: $title)
+                    TextField("Name", text: $title, prompt: Text("Name").placeholderStyle())
                         .textInputAutocapitalization(.words)
                     if case .add = mode {
                         // Secure entry: no keyboard learning, suggestions or screen echo of the secret.
-                        SecureField("Setup key", text: $secret)
+                        SecureField("Setup key", text: $secret, prompt: Text("Setup key").placeholderStyle())
                             .textContentType(.oneTimeCode) // never offer to save it as a password
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
@@ -40,11 +40,11 @@ struct EntryFormView: View {
                     }
                 }
                 Section {
-                    TextField("Website", text: $website)
+                    TextField("Website", text: $website, prompt: Text("Website").placeholderStyle())
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    TextField("Notes", text: $notes, axis: .vertical)
+                    TextField("Notes", text: $notes, prompt: Text("Notes").placeholderStyle(), axis: .vertical)
                         .lineLimit(2...6)
                 } header: {
                     Text("Optional")

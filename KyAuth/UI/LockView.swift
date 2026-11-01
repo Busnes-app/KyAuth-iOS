@@ -59,7 +59,7 @@ struct PinUnlockView: View {
         NavigationStack {
             ThemedForm {
                 Section {
-                    SecureField("PIN", text: $pin)
+                    SecureField("PIN", text: $pin, prompt: Text("PIN").placeholderStyle())
                         .keyboardType(.numberPad)
                         .textContentType(.oneTimeCode)
                         .focused($focused)
