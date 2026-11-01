@@ -17,7 +17,7 @@ struct SettingsView: View {
                     Section {
                         Button("Exit Demo") { model.lock() }
                     } header: {
-                        Text("Demo mode")
+                        Text("Demo mode").sectionHeaderStyle()
                     } footer: {
                         Text("Codes and sign-in requests here are simulated and kept in memory: none are saved or sent anywhere. Exit the demo to pair with KyIdentity.")
                     }
@@ -38,7 +38,7 @@ struct SettingsView: View {
                             Button { Task { await model.reconnectPush() } } label: { SettingsRowLabel("Reconnect Sign-in Requests") }
                         }
                     } header: {
-                        Text("Sign-in requests")
+                        Text("Sign-in requests").sectionHeaderStyle()
                     } footer: {
                         Text("KyIdentity sends sign-in requests to this device through Apple Push.")
                     }
@@ -57,7 +57,7 @@ struct SettingsView: View {
                             Button { showPinSetup = true } label: { SettingsRowLabel("Set a PIN", trailing: .chevron) }
                         }
                     } header: {
-                        Text("Security")
+                        Text("Security").sectionHeaderStyle()
                     } footer: {
                         Text("KyAuth locks when you leave it, and after the auto-lock time in the app. A PIN is asked after \(UserPresence.biometryName). Five wrong PINs erase KyAuth's data on this device.")
                     }
@@ -78,7 +78,7 @@ struct SettingsView: View {
                         }
                     }
                 } header: {
-                    Text("Appearance")
+                    Text("Appearance").sectionHeaderStyle()
                 } footer: {
                     Text("Each theme has a light and a dark version. System switches between them with this device's setting.")
                 }
@@ -92,7 +92,7 @@ struct SettingsView: View {
                         SettingsRowLabel("Privacy Policy", trailing: .external)
                     }
                 } header: {
-                    Text("About")
+                    Text("About").sectionHeaderStyle()
                 } footer: {
                     Text("Codes are stored only on this device, encrypted, with no backup or sync. If you lose the device, use your KyIdentity recovery codes.")
                 }
@@ -137,7 +137,7 @@ struct SettingsView: View {
                 Button { showPairing = true } label: { SettingsRowLabel("Pair with KyIdentity", trailing: .chevron) }
             }
         } header: {
-            Text("KyIdentity")
+            Text("KyIdentity").sectionHeaderStyle()
         } footer: {
             if model.account?.canSignOn == false {
                 Text("To let suite apps such as KyPost sign in through this device, turn on sign-in for this device on the KyIdentity devices page, then pair again.")

@@ -26,7 +26,7 @@ struct EntryFormView: View {
     var body: some View {
         NavigationStack {
             ThemedForm {
-                Section("Account") {
+                Section {
                     TextField("Name", text: $title, prompt: Text("Name").placeholderStyle())
                         .textInputAutocapitalization(.words)
                     if case .add = mode {
@@ -38,6 +38,8 @@ struct EntryFormView: View {
                             .font(.body.monospaced())
                             .privacySensitive()
                     }
+                } header: {
+                    Text("Account").sectionHeaderStyle()
                 }
                 Section {
                     TextField("Website", text: $website, prompt: Text("Website").placeholderStyle())
@@ -47,10 +49,10 @@ struct EntryFormView: View {
                     TextField("Notes", text: $notes, prompt: Text("Notes").placeholderStyle(), axis: .vertical)
                         .lineLimit(2...6)
                 } header: {
-                    Text("Optional")
+                    Text("Optional").sectionHeaderStyle()
                 }
                 if case .add = mode {
-                    Section("Advanced") {
+                    Section {
                         Picker("Digits", selection: $digits) {
                             ForEach(6...8, id: \.self) { Text("\($0)") }
                         }
@@ -60,6 +62,8 @@ struct EntryFormView: View {
                         Picker("Algorithm", selection: $algorithm) {
                             ForEach(TotpEntry.Algorithm.allCases, id: \.self) { Text($0.rawValue) }
                         }
+                    } header: {
+                        Text("Advanced").sectionHeaderStyle()
                     }
                 }
                 if let error {

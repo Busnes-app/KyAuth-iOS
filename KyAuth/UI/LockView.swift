@@ -65,7 +65,7 @@ struct PinUnlockView: View {
                         .focused($focused)
                         .onSubmit(submit)
                 } header: {
-                    Text("Enter your KyAuth PIN")
+                    Text("Enter your KyAuth PIN").sectionHeaderStyle()
                 } footer: {
                     if let error { StatusLabel(error, .danger) }
                 }

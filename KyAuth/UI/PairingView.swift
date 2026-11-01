@@ -80,7 +80,7 @@ struct PairingView: View {
         } footer: {
             Text("Open the KyIdentity devices page and add a device. The code is valid for 90 seconds.")
         }
-        Section("Or enter the details") {
+        Section {
             TextField("Server (https://…)", text: draft.serverUrl, prompt: Text("Server (https://…)").placeholderStyle())
                 .keyboardType(.URL)
                 .textInputAutocapitalization(.never)
@@ -92,6 +92,8 @@ struct PairingView: View {
                 .keyboardType(.numberPad)
             Button("Pair") { pairManually() }
                 .disabled(draft.wrappedValue.serverUrl.isBlank || draft.wrappedValue.userId.isBlank || draft.wrappedValue.pinCode.isBlank)
+        } header: {
+            Text("Or enter the details").sectionHeaderStyle()
         }
     }
 

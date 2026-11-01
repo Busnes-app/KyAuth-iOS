@@ -88,6 +88,20 @@ extension View {
     }
 }
 
+extension Text {
+    /// A grouped-list section header: footnote, semibold, secondary, in the case it is written in.
+    /// iOS 26's default header is nearly body size and competes with the rows under it.
+    func sectionHeaderStyle() -> some View {
+        font(.footnote.weight(.semibold)).foregroundStyle(.secondary).textCase(nil)
+    }
+
+    /// A text field placeholder in ink at 60%, at least 4.5:1 on every pair's surface; the
+    /// system placeholder gray falls short of that.
+    func placeholderStyle() -> Text {
+        foregroundStyle(Color.primary.opacity(0.6))
+    }
+}
+
 /// A state in words with its icon, in the status color: never color alone.
 struct StatusLabel: View {
     enum Kind {
