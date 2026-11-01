@@ -64,16 +64,17 @@ struct SettingsView: View {
                     Picker("Appearance", selection: $model.appearance) {
                         ForEach(Appearance.allCases) { Text($0.title).tag($0) }
                     }
-                    Picker("Theme", selection: $model.themePair) {
-                        ForEach(ThemePair.allCases) { pair in
-                            HStack(spacing: 12) {
-                                ThemeSwatch(pair: pair)
-                                Text(pair.title)
+                    // Not a `.navigationLink` picker: its pushed list keeps the system background.
+                    NavigationLink {
+                        ThemePickerView(selection: $model.themePair)
+                    } label: {
+                        LabeledContent("Theme") {
+                            HStack(spacing: 8) {
+                                ThemeSwatch(pair: model.themePair)
+                                Text(model.themePair.title)
                             }
-                            .tag(pair)
                         }
                     }
-                    .pickerStyle(.navigationLink)
                 } header: {
                     Text("Appearance")
                 } footer: {
@@ -145,6 +146,31 @@ struct SettingsView: View {
         case .denied: StatusLabel("Off", .warning)
         default: Text("Not set")
         }
+    }
+}
+
+/// The six pairs on the theme background, each row previewing both halves.
+struct ThemePickerView: View {
+    @Binding var selection: ThemePair
+
+    var body: some View {
+        ThemedForm {
+            ForEach(ThemePair.allCases) { pair in
+                Button { selection = pair } label: {
+                    HStack(spacing: 12) {
+                        ThemeSwatch(pair: pair)
+                        Text(pair.title).foregroundStyle(.primary)
+                        Spacer()
+                        if pair == selection {
+                            Image(systemName: "checkmark").fontWeight(.semibold).foregroundStyle(.tint)
+                        }
+                    }
+                }
+                .accessibilityAddTraits(pair == selection ? .isSelected : [])
+            }
+        }
+        .navigationTitle("Theme")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
