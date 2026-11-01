@@ -132,8 +132,9 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   `.placeholderStyle()` (both ink at 60%, at least 4.5:1 on every half). Settings rows are ink
   (`SettingsRowLabel`): a chevron when they open a sheet or screen, `arrow.up.right` when they
   leave KyAuth. The accent marks only Exit Demo; destructive rows stay system red.
-- Tab icons are outline unless selected (`TabLabel`, template `UIImage`s: the iOS 26 tab bar
-  fills SF Symbols and ignores `symbolVariants`).
+- Tab icons name the outline symbol unless selected (`TabLabel`, template `UIImage`s: the iOS 26
+  tab bar fills SF Symbols and ignores `symbolVariants`). The inactive Settings gear still draws
+  solid on iOS 26, with `.tabItem` or `Tab`; the cause is not known.
 - No `.pickerStyle(.navigationLink)`: its pushed list keeps the system background. Push a
   `ThemedForm` instead (`ThemePickerView`).
 - Appearance setting (`UI/Theme.swift`, applied on the window by `UI/Appearance.swift`): Appearance
