@@ -44,8 +44,9 @@ git log --format='%h %s' -G 'CURRENT_PROJECT_VERSION = 2;' -- KyAuth.xcodeproj/p
 ```
 
 For 0.5.0 build 2 this prints `4f7c085 release: 0.5.0 build 2`. This is a record, not
-proof: nothing ties the binary Apple distributes to that commit. Release commits are not
-tagged yet.
+proof: nothing ties the binary Apple distributes to that commit. From 0.6.0 a release is
+uploaded by `.github/workflows/release.yml` from a `v<version>` tag on the release commit;
+earlier builds were uploaded by hand and are not tagged.
 
 ## What this project cannot offer
 
