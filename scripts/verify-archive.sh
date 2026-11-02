@@ -58,7 +58,9 @@ done
 
 for bundle in "${bundles[@]}"; do
   name=$(basename "$bundle")
-  signer=$(codesign -dvv "$bundle" 2>&1 | sed -n 's/^TeamIdentifier=//p' | head -1)
+  # codesign exits non-zero on an unsigned bundle; refuse with a message below
+  # rather than let pipefail end the script silently.
+  signer=$(codesign -dvv "$bundle" 2>&1 | sed -n 's/^TeamIdentifier=//p' | head -1 || true)
   if [ "$signer" != "$teams" ]; then
     echo "${name} is signed by team '${signer:-none}', expected ${teams}" >&2
     exit 1
