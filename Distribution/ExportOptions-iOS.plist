@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- App Store Connect, the only channel KyAuth ships through. -->
+	<key>method</key>
+	<string>app-store-connect</string>
+	<!-- Must equal DEVELOPMENT_TEAM in project.pbxproj;
+	     scripts/verify-archive.sh refuses an upload when they differ. -->
+	<key>teamID</key>
+	<string>TATYN4X57D</string>
+	<!-- Uploads straight from xcodebuild rather than exporting a .ipa and
+	     handing it to a second tool. -->
+	<key>destination</key>
+	<string>upload</string>
+	<!-- Automatic: xcodebuild -exportArchive, given the App Store Connect API
+	     key and -allowProvisioningUpdates, fetches the App Store profiles for
+	     the app and the KyAuthPush extension and signs with the team's
+	     cloud-managed Apple Distribution certificate. No distribution
+	     certificate or profile is stored as a secret. The key must have the
+	     Admin role; any other role gets "Cloud signing permission error". -->
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>uploadSymbols</key>
+	<true/>
+	<!-- Never let the exporter invent a version. The build number is the
+	     project's own CURRENT_PROJECT_VERSION, and release.yml has already
+	     checked both numbers against the tag and the archive. -->
+	<key>manageAppVersionAndBuildNumber</key>
+	<false/>
+</dict>
+</plist>

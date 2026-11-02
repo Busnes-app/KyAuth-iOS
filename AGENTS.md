@@ -268,6 +268,14 @@ When the user requests a durable behavior change, record it here or in the relev
   tested; it never becomes a general claim about Apple TLS, and the fixture and
   its host calibration stay in the suite.
 
+- `.github/workflows/release.yml` uploads to App Store Connect on a `v*` tag, behind the
+  `release` environment (setup and secrets in its header). It uploads the project's own
+  `CURRENT_PROJECT_VERSION`, never a computed one. `scripts/verify-version.sh [tag]` fails on
+  version or build-number drift between configurations and on a tag that is not
+  `v<MARKETING_VERSION>`; `scripts/verify-archive.sh` (macOS) refuses an archive whose app or
+  extensions carry other numbers or another signing team than `DEVELOPMENT_TEAM`, which must
+  equal the `teamID` in `Distribution/ExportOptions-iOS.plist`.
+
 - Scorecard (`.github/workflows/scorecard.yml`) publishes public supply-chain security results on default-branch pushes, weekly and after branch-protection changes. Keep publishing restricted to the default branch, action pins immutable, checkout credentials disabled and OIDC/code-scanning writes scoped to the analysis job. README’s live Scorecard badge needs a successful published run.
 
 ## Child DOX Index
