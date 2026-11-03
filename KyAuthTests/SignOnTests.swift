@@ -269,11 +269,12 @@ struct SignOnBusyTests {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let model = AppModel(account: paired, makeHandoff: { SignOnHandoff(root: root) })
         let a = nonce("E"), b = nonce("F")
-        try writeRequest(a, root: root)
+        // Read 100 s after it was written: the consumer's 180 s run from the writing.
+        try writeRequest(a, root: root, createdAt: Date().addingTimeInterval(-100))
         model.handleOpenURL(URL(string: "kyauth://signon?nonce=\(a)")!)
         #expect(model.signOnRequest?.nonce == a)
 
-        let later = Date().addingTimeInterval(181)
+        let later = Date().addingTimeInterval(81)
         try writeRequest(b, root: root, createdAt: later)
         model.handleOpenURL(URL(string: "kyauth://signon?nonce=\(b)")!, now: later)
         #expect(model.signOnRequest?.nonce == b)

@@ -543,7 +543,7 @@ final class AppModel {
         defer { retryUnsentResponses() }
         do {
             let request = try handoff.take(nonce: nonce, paired: account, now: now)
-            if let current = signOnRequest, now.timeIntervalSince(current.receivedAt) > Self.consumerWait {
+            if let current = signOnRequest, now.timeIntervalSince(current.createdAt) > Self.consumerWait {
                 // Its consumer stopped waiting: answer it without leaving KyAuth, and take the new one.
                 signOnRequest = nil
                 deliver(.error(SignOnRefusal.expired.errorDescription ?? ""), nonce: current.nonce, consumer: current.consumer)
@@ -578,7 +578,7 @@ final class AppModel {
             switch await TokenClient().redeem(serverUrl: account.serverUrl, clientId: request.clientId, assertion: assertion) {
             case .success(let idToken):
                 // KyIdentity decides sign-on; the flag from pairing is only what Settings shows.
-                if !account.canSignOn, var updated = self.account {
+                if !account.canSignOn, var updated = self.account, updated.deviceId == account.deviceId {
                     updated.canSignOn = true
                     try? PairingStore.save(updated)
                     self.account = updated

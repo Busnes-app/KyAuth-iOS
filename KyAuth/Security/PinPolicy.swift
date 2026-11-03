@@ -133,6 +133,8 @@ enum PinStore {
         resetFailures()
     }
 
+    /// Throws on a Keychain error, which says nothing about the PIN. A missing or undecodable verifier
+    /// can never match, so it is a wrong PIN: the wipe ladder is the way out of it.
     static func verify(_ pin: String, context: LAContext) throws -> Bool {
         guard let data = try Keychain.get(verifierAccount, context: context),
               let verifier = try? JSONDecoder().decode(Verifier.self, from: data)

@@ -20,8 +20,8 @@ struct SignOnRequest: Equatable {
     let clientId: String
     let origin: String
     let issuer: String
-    /// When KyAuth took it; its consumer gives up on it 180 s after writing it.
-    let receivedAt: Date
+    /// When the consumer wrote it; the consumer gives up on it 180 s later.
+    let createdAt: Date
 }
 
 enum SignOnResponse: Equatable {
@@ -104,7 +104,8 @@ struct SignOnHandoff {
         guard sameIssuer(issuer, paired.serverUrl) else {
             throw SignOnRefusal.refused("KyAuth is paired with a different KyIdentity server.", consumer)
         }
-        return SignOnRequest(nonce: nonce, consumer: consumer, clientId: clientId, origin: origin, issuer: issuer, receivedAt: now)
+        return SignOnRequest(nonce: nonce, consumer: consumer, clientId: clientId, origin: origin, issuer: issuer,
+                             createdAt: Date(timeIntervalSince1970: TimeInterval(createdAt) / 1000))
     }
 
     /// scheme, host, port and path must match; two unparseable values are not the same issuer.

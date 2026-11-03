@@ -46,7 +46,6 @@ struct PairingView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .disabled(working)
                 }
             }
             .sheet(isPresented: $scanning) {
