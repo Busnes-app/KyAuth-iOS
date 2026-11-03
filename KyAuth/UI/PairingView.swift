@@ -11,8 +11,8 @@ struct PairingView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var scanning = false
-    @State private var working = false
-    @State private var error: String?
+    private var working: Bool { model.isPairing }
+    private var error: String? { draft.wrappedValue.error }
 
     private var draft: Binding<PairingDraft> {
         Binding(get: { model.pairingDraft ?? PairingDraft(scanned: scanned) }, set: { model.pairingDraft = $0 })
@@ -63,6 +63,7 @@ struct PairingView: View {
                         }
                     }
                 }
+                .privacyCovered()
             }
         }
         .interactiveDismissDisabled(working)
@@ -88,7 +89,7 @@ struct PairingView: View {
             TextField("User ID", text: draft.userId, prompt: Text("User ID").placeholderStyle())
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-            TextField("Pairing PIN", text: draft.pinCode, prompt: Text("Pairing PIN").placeholderStyle())
+            SecureField("Pairing PIN", text: draft.pinCode, prompt: Text("Pairing PIN").placeholderStyle())
                 .keyboardType(.numberPad)
             Button("Pair") { pairManually() }
                 .disabled(draft.wrappedValue.serverUrl.isBlank || draft.wrappedValue.userId.isBlank || draft.wrappedValue.pinCode.isBlank)
@@ -99,7 +100,7 @@ struct PairingView: View {
 
     private func pasteLink() {
         guard let value = UIPasteboard.general.string else {
-            error = "The clipboard has no pairing link."
+            draft.wrappedValue.error = "The clipboard has no pairing link."
             return
         }
         pair(raw: value)
@@ -115,7 +116,7 @@ struct PairingView: View {
             )
             run(pairing)
         } catch {
-            self.error = error.localizedDescription
+            draft.wrappedValue.error = error.localizedDescription
         }
     }
 
@@ -123,22 +124,18 @@ struct PairingView: View {
         do {
             run(try QrPairingParser.parse(raw))
         } catch {
-            self.error = error.localizedDescription
+            draft.wrappedValue.error = error.localizedDescription
         }
     }
 
+    /// The model keeps the spinner and the error, so a lock mid-pairing brings the form back as it is.
     private func run(_ pairing: QrPairing) {
-        error = nil
-        working = true
+        draft.wrappedValue.error = nil
+        let deviceName = draft.wrappedValue.deviceName.trimmedNonBlank ?? UIDevice.current.model
         Task {
-            defer { working = false }
-            do {
-                try await model.pair(pairing, deviceName: draft.wrappedValue.deviceName.trimmedNonBlank ?? UIDevice.current.model)
-                model.notice = "Paired with KyIdentity"
-                dismiss()
-            } catch {
-                self.error = error.localizedDescription
-            }
+            guard (try? await model.pair(pairing, deviceName: deviceName)) != nil else { return }
+            model.notice = "Paired with KyIdentity"
+            dismiss()
         }
     }
 }

@@ -4,7 +4,6 @@ import SwiftUI
 /// prompt: answering it needs only the device key, never the vault.
 struct LockView: View {
     @Environment(AppModel.self) private var model
-    @State private var prompted = false
 
     var body: some View {
         NavigationStack {
@@ -12,6 +11,7 @@ struct LockView: View {
                 VStack(spacing: 28) {
                     if let challenge = model.pendingChallenge {
                         MfaRequestCard(challenge: challenge)
+                            .id(challenge.challengeId)
                             .padding(.top, 24)
                     } else {
                         Spacer(minLength: 80)
@@ -42,8 +42,8 @@ struct LockView: View {
         .task {
             // A launch from a notification or a sign-on link delivers it just after the first frame.
             try? await Task.sleep(for: .milliseconds(400))
-            guard !prompted, model.promptsUnlockOnLaunch, model.pendingChallenge == nil, model.signOnRequest == nil else { return }
-            prompted = true
+            guard model.promptsUnlockOnLaunch, model.pendingChallenge == nil, model.signOnRequest == nil,
+                  model.takeAutoUnlock() else { return }
             await model.unlock()
         }
     }

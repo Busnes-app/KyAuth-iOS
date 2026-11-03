@@ -58,7 +58,8 @@ Response, exactly one of:
    120 s (or more than 30 s in the future) writes nothing it can address, so it shows
    "Sign-in request expired" and stops. An unknown `consumer` is treated the same way: KyAuth has
    no return scheme for it. It then checks, in order: client ID, origin, pairing (a user ID),
-   issuer and `canSignOn`. A failure writes an `error` response.
+   issuer. A failure writes an `error` response. Whether the device may sign on is checked by
+   KyIdentity at `/oauth/token` (`device_signon_disabled`), not against the flag saved at pairing.
 3. KyAuth shows "<app> at <relay host[:port]> wants to sign in as <user> at <KyIdentity host>."
    with Cancel and Sign In. This works while the vault is locked: no vault key is used.
 4. Sign In signs the RFC 7523 assertion with the device key (one Face ID / passcode prompt),

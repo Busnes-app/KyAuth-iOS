@@ -172,9 +172,10 @@ struct SignOnHandoffTests {
         #expect(refusal(request(), paired: nil) == "KyAuth is not paired with KyIdentity.")
         #expect(refusal(request(["issuer": "https://other.example.com"]), paired: paired) == "KyAuth is paired with a different KyIdentity server.")
         #expect(refusal(request(["issuer": "https://id.example.com/sub"]), paired: paired) == "KyAuth is paired with a different KyIdentity server.")
+        // KyIdentity decides at /oauth/token: the flag saved at pairing goes stale on the devices page.
         var off = paired
         off.canSignOn = false
-        #expect(refusal(request(), paired: off)?.contains("turned off") == true)
+        #expect(refusal(request(), paired: off) == nil)
     }
 
     @Test func takeIsSingleUseAndResponsesAreWritten() throws {
@@ -224,11 +225,11 @@ struct SignOnBusyTests {
 
     private func nonce(_ c: Character) -> String { String(repeating: c, count: 43) }
 
-    private func writeRequest(_ nonce: String, root: URL) throws {
+    private func writeRequest(_ nonce: String, root: URL, createdAt: Date = Date()) throws {
         let json: [String: Any] = [
             "v": 1, "nonce": nonce, "consumer": "org.kysecurity.mail", "clientId": "kypost",
             "origin": "https://relay.example.com", "issuer": "https://id.example.com",
-            "createdAtMs": Int64(Date().timeIntervalSince1970 * 1000),
+            "createdAtMs": Int64(createdAt.timeIntervalSince1970 * 1000),
         ]
         try FileManager.default.createDirectory(at: root.appendingPathComponent("requests"), withIntermediateDirectories: true)
         try JSONSerialization.data(withJSONObject: json).write(to: root.appendingPathComponent("requests/\(nonce).json"))
@@ -260,6 +261,27 @@ struct SignOnBusyTests {
         #expect(model.signOnRequest?.nonce == a)
 
         model.retryUnsentResponses(now: Date().addingTimeInterval(1000))
+        try? FileManager.default.removeItem(at: root)
+    }
+
+    /// A sheet left open after its consumer gave up must not answer every new sign-in "busy".
+    @Test func aRequestItsConsumerAbandonedGivesWayToANewOne() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let model = AppModel(account: paired, makeHandoff: { SignOnHandoff(root: root) })
+        let a = nonce("E"), b = nonce("F")
+        // Read 100 s after it was written: the consumer's 180 s run from the writing.
+        try writeRequest(a, root: root, createdAt: Date().addingTimeInterval(-100))
+        model.handleOpenURL(URL(string: "kyauth://signon?nonce=\(a)")!)
+        #expect(model.signOnRequest?.nonce == a)
+
+        let later = Date().addingTimeInterval(81)
+        try writeRequest(b, root: root, createdAt: later)
+        model.handleOpenURL(URL(string: "kyauth://signon?nonce=\(b)")!, now: later)
+        #expect(model.signOnRequest?.nonce == b)
+        let written = try JSONSerialization.jsonObject(
+            with: Data(contentsOf: root.appendingPathComponent("responses/\(a).json"))
+        ) as? [String: Any]
+        #expect(written?["status"] as? String == "error")
         try? FileManager.default.removeItem(at: root)
     }
 

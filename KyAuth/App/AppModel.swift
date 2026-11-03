@@ -47,6 +47,12 @@ final class AppModel {
     var pairingDraft: PairingDraft?
     /// Set by `lock` when a pairing form was open, so the unlocked app shows it again.
     var resumePairing = false
+    /// A pairing is talking to Apple Push or KyIdentity. Held here, not in the form, because a lock
+    /// rebuilds the form while the pairing goes on.
+    private(set) var isPairing = false
+    /// The lock screen prompts on its own only at launch and after leaving KyAuth, never after Lock,
+    /// the idle lock or the PIN screen's Cancel, which would unlock again at once.
+    private var autoUnlockArmed = true
 
     var idleMinutes: Int {
         didSet { UserDefaults.standard.set(idleMinutes, forKey: "idle-minutes") }
@@ -132,12 +138,25 @@ final class AppModel {
         guard lockState == .needsPin, let context = pinContext else { return nil }
         let now = ProcessInfo.processInfo.systemUptime
         let stored = PinStore.failures
+        // The fifth failure was saved but the erase did not finish (the app was ended): finish it.
+        if PinFailurePolicy.mustWipe(stored) {
+            eraseAllData()
+            erasedAfterPins = true
+            return nil
+        }
         let state = PinFailurePolicy.normalized(stored, now: now)
         if state != stored { PinStore.saveFailures(state) }
         guard PinFailurePolicy.mayTry(state, now: now) else {
             return "Try again in \(PinFailurePolicy.secondsUntilRetry(state, now: now)) seconds."
         }
-        if (try? PinStore.verify(pin, context: context)) == true {
+        let matches: Bool
+        do {
+            matches = try PinStore.verify(pin, context: context)
+        } catch {
+            // A Keychain error says nothing about the PIN, so it is never counted towards the erase.
+            return "KyAuth could not check the PIN: \(error.localizedDescription) Try again."
+        }
+        if matches {
             PinStore.resetFailures()
             context.invalidate()
             pinContext = nil
@@ -175,7 +194,9 @@ final class AppModel {
     }
 
     /// Clears codes, the vault key and anything copied, ends the demo, and closes every open form.
-    func lock() {
+    /// Leaving KyAuth (`leavingApp`) keeps a copied code, which is how it gets pasted elsewhere; it is
+    /// local-only and expires at the end of its period anyway. It also arms the lock screen's prompt.
+    func lock(leavingApp: Bool = false) {
         if isDemo {
             isDemo = false
             demoBrowserDigits = nil
@@ -190,7 +211,14 @@ final class AppModel {
         vaultError = nil
         lockState = .locked
         idleLock.reset()
-        clearCopiedCode()
+        autoUnlockArmed = leavingApp
+        if !leavingApp { clearCopiedCode() }
+    }
+
+    /// True once per arming: the lock screen calls it before prompting on its own.
+    func takeAutoUnlock() -> Bool {
+        defer { autoUnlockArmed = false }
+        return autoUnlockArmed
     }
 
     func recordActivity() {
@@ -265,6 +293,21 @@ final class AppModel {
     /// Pairs with KyIdentity. The device key is replaced first, so a failed re-pair leaves the phone
     /// unpaired: its old key is already gone.
     func pair(_ pairing: QrPairing, deviceName: String) async throws {
+        // A second pairing would replace the first one's keys, and its failure would delete them.
+        guard !isPairing else { throw PairingError.invalid("KyAuth is already pairing. Wait for it to finish.") }
+        isPairing = true
+        defer { isPairing = false }
+        do {
+            try await register(pairing, deviceName: deviceName)
+        } catch {
+            // A form closed while pairing went on has nowhere to show it, and the phone may be unpaired.
+            if pairingDraft == nil { notice = error.localizedDescription }
+            pairingDraft?.error = error.localizedDescription
+            throw error
+        }
+    }
+
+    private func register(_ pairing: QrPairing, deviceName: String) async throws {
         if isDemo { lock() }
         let pushToken = try await pushTokenForPairing()
         guard UserPresence.deviceHasPasscode else { throw UserPresenceError.noPasscode }
@@ -489,7 +532,7 @@ final class AppModel {
 
     // MARK: - Sign-on handoff
 
-    func handleOpenURL(_ url: URL) {
+    func handleOpenURL(_ url: URL, now: Date = Date()) {
         guard url.scheme?.lowercased() == "kyauth", url.host?.lowercased() == "signon" else { return }
         let nonce = URLComponents(url: url, resolvingAgainstBaseURL: false)?
             .queryItems?.first(where: { $0.name == "nonce" })?.value ?? ""
@@ -498,9 +541,15 @@ final class AppModel {
             return
         }
         handoff.sweepStaleRequests()
-        retryUnsentResponses()
+        // After the new request is on screen, so a retried answer does not switch away from it.
+        defer { retryUnsentResponses() }
         do {
-            let request = try handoff.take(nonce: nonce, paired: account)
+            let request = try handoff.take(nonce: nonce, paired: account, now: now)
+            if let current = signOnRequest, now.timeIntervalSince(current.createdAt) > Self.consumerWait {
+                // Its consumer stopped waiting: answer it without leaving KyAuth, and take the new one.
+                signOnRequest = nil
+                deliver(.error(SignOnRefusal.expired.errorDescription ?? ""), nonce: current.nonce, consumer: current.consumer)
+            }
             if signOnRequest == nil {
                 signOnRequest = request
             } else {
@@ -518,6 +567,11 @@ final class AppModel {
 
     func approveSignOn() async {
         guard let request = signOnRequest, let account, let userId = account.userId else { return }
+        // A request replaced while this one was signing was already answered "expired".
+        func finish(_ response: SignOnResponse) {
+            guard signOnRequest?.nonce == request.nonce else { return }
+            finishSignOn(response, nonce: request.nonce, consumer: request.consumer)
+        }
         do {
             let now = Int64(Date().timeIntervalSince1970)
             let input = DeviceAssertion.signingInput(
@@ -530,14 +584,20 @@ final class AppModel {
             let assertion = DeviceAssertion.compact(input, rawSignature: signature.rawRepresentation)
             switch await TokenClient().redeem(serverUrl: account.serverUrl, clientId: request.clientId, assertion: assertion) {
             case .success(let idToken):
-                finishSignOn(.ok(idToken: idToken), nonce: request.nonce, consumer: request.consumer)
+                // KyIdentity decides sign-on; the flag from pairing is only what Settings shows.
+                if !account.canSignOn, var updated = self.account, updated.deviceId == account.deviceId {
+                    updated.canSignOn = true
+                    try? PairingStore.save(updated)
+                    self.account = updated
+                }
+                finish(.ok(idToken: idToken))
             case .failure(let message):
-                finishSignOn(.error(message), nonce: request.nonce, consumer: request.consumer)
+                finish(.error(message))
             }
         } catch UserPresenceError.cancelled {
-            finishSignOn(.cancelled, nonce: request.nonce, consumer: request.consumer)
+            finish(.cancelled)
         } catch {
-            finishSignOn(.error(error.localizedDescription), nonce: request.nonce, consumer: request.consumer)
+            finish(.error(error.localizedDescription))
         }
     }
 
@@ -635,4 +695,6 @@ struct PairingDraft: Equatable {
     var userId = ""
     var pinCode = ""
     var deviceName = UIDevice.current.name
+    /// Why the last pairing failed; kept here so the form shows it again after a lock.
+    var error: String?
 }

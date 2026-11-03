@@ -17,7 +17,7 @@ struct KyAuthApp: App {
             switch phase {
             case .background:
                 // Leaving the app locks it at once; the idle timer only covers the foreground.
-                delegate.model.lock()
+                delegate.model.lock(leavingApp: true)
             case .active:
                 delegate.model.checkIdle()
                 delegate.model.retryUnsentResponses()

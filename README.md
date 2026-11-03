@@ -14,7 +14,7 @@ through the KyAuth handoff. It is the iOS counterpart of
 - Pair an HTTPS KyIdentity server for sign-in requests delivered over Apple Push.
 - Approve using Face ID or the device passcode and the browser’s two-digit challenge.
 - Sign in to supported Ky apps through an App Group handoff, subject to matching signing/configuration.
-- Lock on background/idle, clear copied codes, and use an optional PIN with a five-failure local wipe.
+- Lock on background/idle, expire copied codes at the end of their period, and use an optional PIN with a five-failure local wipe.
 
 There is no password manager, passkey provider, UnifiedPush, or TOTP backup/export/sync.
 Keep each site’s recovery codes elsewhere. Losing the phone or removing its passcode can

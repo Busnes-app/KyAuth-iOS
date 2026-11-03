@@ -94,7 +94,7 @@ struct SettingsView: View {
                 } header: {
                     Text("About").sectionHeaderStyle()
                 } footer: {
-                    Text("Codes are stored only on this device, encrypted, with no backup or sync. If you lose the device, use your KyIdentity recovery codes.").sectionFooterStyle()
+                    Text("Codes are stored only on this device, encrypted, with no backup or sync. If you lose the device, use each service's own recovery codes.").sectionFooterStyle()
                 }
                 if !model.isDemo {
                     Section {
@@ -103,8 +103,8 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
-            .sheet(isPresented: $showPairing) { PairingView() }
-            .sheet(isPresented: $showPinSetup) { PinSetupView() }
+            .sheet(isPresented: $showPairing) { PairingView().privacyCovered() }
+            .sheet(isPresented: $showPinSetup) { PinSetupView().privacyCovered() }
             .confirmationDialog("Unpair from KyIdentity?", isPresented: $confirmUnpair, titleVisibility: .visible) {
                 Button("Unpair", role: .destructive) { model.unpair() }
             } message: {
@@ -141,7 +141,7 @@ struct SettingsView: View {
         } footer: {
             Group {
                 if model.account?.canSignOn == false {
-                    Text("To let suite apps such as KyPost sign in through this device, turn on sign-in for this device on the KyIdentity devices page, then pair again.")
+                    Text("To let suite apps such as KyPost sign in through this device, turn on sign-in for this device on the KyIdentity devices page, then sign in from the app again.")
                 }
             }
             .sectionFooterStyle()

@@ -20,6 +20,8 @@ struct SignOnRequest: Equatable {
     let clientId: String
     let origin: String
     let issuer: String
+    /// When the consumer wrote it; the consumer gives up on it 180 s later.
+    let createdAt: Date
 }
 
 enum SignOnResponse: Equatable {
@@ -66,7 +68,8 @@ struct SignOnHandoff {
     }
 
     /// Reads and deletes the request (single use), then validates it: age and consumer, client ID,
-    /// origin, pairing, issuer, `canSignOn`.
+    /// origin, pairing, issuer. Whether this device may sign on is KyIdentity's to decide at
+    /// `/oauth/token`: the flag saved at pairing goes stale when it is changed on the devices page.
     func take(nonce: String, paired: PairedAccount?, now: Date = Date()) throws -> SignOnRequest {
         guard Self.isValidNonce(nonce) else { throw SignOnRefusal.expired }
         let file = root.appendingPathComponent("requests/\(nonce).json")
@@ -101,10 +104,8 @@ struct SignOnHandoff {
         guard sameIssuer(issuer, paired.serverUrl) else {
             throw SignOnRefusal.refused("KyAuth is paired with a different KyIdentity server.", consumer)
         }
-        guard paired.canSignOn else {
-            throw SignOnRefusal.refused("Sign-in from this device is turned off. Turn it on for this device on the KyIdentity devices page, then try again.", consumer)
-        }
-        return SignOnRequest(nonce: nonce, consumer: consumer, clientId: clientId, origin: origin, issuer: issuer)
+        return SignOnRequest(nonce: nonce, consumer: consumer, clientId: clientId, origin: origin, issuer: issuer,
+                             createdAt: Date(timeIntervalSince1970: TimeInterval(createdAt) / 1000))
     }
 
     /// scheme, host, port and path must match; two unparseable values are not the same issuer.
