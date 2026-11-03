@@ -15,7 +15,7 @@ struct MainTabView: View {
         }
         // A pairing form that was open when KyAuth locked comes back once it is unlocked.
         .sheet(isPresented: Binding(get: { model.resumePairing }, set: { if !$0 { model.pairingFormClosed() } })) {
-            PairingView()
+            PairingView().privacyCovered()
         }
     }
 }
@@ -38,6 +38,7 @@ struct VaultView: View {
                 if let challenge = model.pendingChallenge {
                     Section {
                         MfaRequestCard(challenge: challenge)
+                            .id(challenge.challengeId)
                             .listRowInsets(EdgeInsets())
                             .listRowBackground(Color.clear)
                     }
@@ -94,11 +95,14 @@ struct VaultView: View {
                 }
             }
             .sheet(item: $sheet) { sheet in
-                switch sheet {
-                case .scan: AddByScanView()
-                case .manual: EntryFormView(mode: .add)
-                case .edit(let entry): EntryFormView(mode: .edit(entry))
+                Group {
+                    switch sheet {
+                    case .scan: AddByScanView()
+                    case .manual: EntryFormView(mode: .add)
+                    case .edit(let entry): EntryFormView(mode: .edit(entry))
+                    }
                 }
+                .privacyCovered()
             }
             .confirmationDialog(
                 "Delete \(pendingDelete?.title ?? "")?",

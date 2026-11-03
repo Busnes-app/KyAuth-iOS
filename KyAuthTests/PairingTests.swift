@@ -65,6 +65,22 @@ struct PairingFormTests {
         }
         #expect(ContinuousClock.now - start < .seconds(5))
     }
+
+    /// A second pairing would replace the first one's device key, and its failure would delete it.
+    @Test func onePairingAtATimeAndItsErrorOutlivesTheForm() async throws {
+        let model = AppModel(account: nil, pushState: PushState())
+        model.pairingDraft = draft()
+        let pairing = try QrPairing(serverUrl: "https://id.example.com", pinCode: "123456", userId: "u-1")
+        let first = Task { try await model.pair(pairing, deviceName: "Test") }
+        while !model.isPairing { await Task.yield() }
+        await #expect(throws: PairingError.invalid("KyAuth is already pairing. Wait for it to finish.")) {
+            try await model.pair(pairing, deviceName: "Test")
+        }
+        first.cancel()
+        _ = await first.result
+        #expect(!model.isPairing)
+        #expect(model.pairingDraft?.error != nil)
+    }
 }
 
 @MainActor

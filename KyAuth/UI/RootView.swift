@@ -13,10 +13,8 @@ struct RootView: View {
             case .needsPin: PinUnlockView()
             case .locked: LockView()
             }
-            if scenePhase != .active || model.screenCaptured {
-                PrivacyCover()
-            }
         }
+        .privacyCovered()
         .tint(Color(model.themePair.assetName(.accent)))
         .background(ActivityTracker { model.recordActivity() })
         .onReceive(Timer.publish(every: 5, on: .main, in: .common).autoconnect()) { _ in
@@ -32,7 +30,7 @@ struct RootView: View {
         }
         .onChange(of: model.theme) { _, theme in theme.apply() }
         .sheet(item: Binding(get: { model.signOnRequest.map(SignOnSheetItem.init) }, set: { _ in })) { item in
-            SignOnSheet(request: item.request)
+            SignOnSheet(request: item.request).privacyCovered()
         }
         .alert(
             "Sign-in",
@@ -56,6 +54,22 @@ struct RootView: View {
 private struct SignOnSheetItem: Identifiable {
     let request: SignOnRequest
     var id: String { request.nonce }
+}
+
+extension View {
+    /// The cover over this screen. Sheets are presented above the root view, so each one needs its own.
+    func privacyCovered() -> some View { modifier(PrivacyCovered()) }
+}
+
+private struct PrivacyCovered: ViewModifier {
+    @Environment(AppModel.self) private var model
+    @Environment(\.scenePhase) private var scenePhase
+
+    func body(content: Content) -> some View {
+        content.overlay {
+            if scenePhase != .active || model.screenCaptured { PrivacyCover() }
+        }
+    }
 }
 
 /// Hides codes in the app switcher snapshot and while the screen is recorded or mirrored.

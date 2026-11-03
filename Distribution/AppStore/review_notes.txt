@@ -2,7 +2,7 @@ KyAuth is the authenticator app for KyIdentity, a sign-in server that each organ
 
 SIGN-IN CODES (NO SERVER NEEDED)
 1. On the lock screen, tap "Unlock with Face ID" (the device needs a passcode).
-2. Tap + > Enter Setup Key. Enter any Name and this Setup key: KYAUTHREVIEWTEST. Tap Save.
+2. Tap + > Enter Setup Key. Enter any Name and this Setup key: KYAUTHREVIEWTESTKYAUTHREVIEWTEST. Tap Save.
 3. A 6-digit code appears and changes every 30 seconds. You can copy, search, edit and delete codes.
 Any service's two-factor setup QR code works the same way.
 

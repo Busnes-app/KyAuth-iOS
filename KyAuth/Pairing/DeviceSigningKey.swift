@@ -57,9 +57,10 @@ enum DeviceSigningKey {
         guard let stored = KeychainCodable.load(Stored.self, account) else { throw DeviceKeyError.missing }
         switch stored.kind {
         case "enclave":
-            let key = try SecureEnclave.P256.Signing.PrivateKey(
+            // Removing the device passcode destroys the enclave key but not this handle to it.
+            guard let key = try? SecureEnclave.P256.Signing.PrivateKey(
                 dataRepresentation: stored.data, authenticationContext: context
-            )
+            ) else { throw DeviceKeyError.missing }
             return try key.signature(for: message)
         default:
             #if targetEnvironment(simulator)

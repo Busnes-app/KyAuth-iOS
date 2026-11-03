@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import UIKit
 @testable import KyAuth
 
 @MainActor
@@ -79,6 +80,33 @@ struct DemoModeTests {
         #expect(model.entries[0].title == "Renamed")
         #expect(model.entries[0].secretBase32 == original[0].secretBase32)
         model.lock()
+    }
+
+    /// Copy exists to paste in another app, and switching to it locks KyAuth.
+    @Test func leavingKyAuthKeepsACopiedCodeAndOtherLocksClearIt() throws {
+        let model = AppModel(account: nil)
+        model.startDemo()
+        let entry = model.entries[0]
+        model.copy("123456", entry: entry)
+        model.lock(leavingApp: true)
+        #expect(UIPasteboard.general.string == "123456")
+
+        model.startDemo()
+        model.copy("654321", entry: entry)
+        model.lock()
+        #expect(UIPasteboard.general.string == nil)
+    }
+
+    /// Lock, the idle lock and the PIN screen's Cancel must not unlock again on their own.
+    @Test func theLockScreenPromptsOnlyAtLaunchAndAfterLeaving() {
+        let model = AppModel(account: nil)
+        #expect(model.takeAutoUnlock())
+        #expect(!model.takeAutoUnlock())
+        model.lock(leavingApp: true)
+        #expect(model.takeAutoUnlock())
+        model.lock(leavingApp: true)
+        model.lock()
+        #expect(!model.takeAutoUnlock())
     }
 
     @Test func pairedPhoneNeverRunsTheDemo() {
