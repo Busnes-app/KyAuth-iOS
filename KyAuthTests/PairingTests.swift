@@ -56,7 +56,7 @@ struct PairingFormTests {
         let model = AppModel(account: nil, pushState: PushState())
         let refusal = URLError(.notConnectedToInternet)
         Task {
-            try await Task.sleep(for: .milliseconds(100))
+            try? await Task.sleep(for: .milliseconds(100))
             model.didFailToRegisterForPush(refusal)
         }
         let start = ContinuousClock.now
