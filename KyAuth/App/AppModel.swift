@@ -300,6 +300,8 @@ final class AppModel {
         do {
             try await register(pairing, deviceName: deviceName)
         } catch {
+            // A form closed while pairing went on has nowhere to show it, and the phone may be unpaired.
+            if pairingDraft == nil { notice = error.localizedDescription }
             pairingDraft?.error = error.localizedDescription
             throw error
         }
@@ -565,6 +567,11 @@ final class AppModel {
 
     func approveSignOn() async {
         guard let request = signOnRequest, let account, let userId = account.userId else { return }
+        // A request replaced while this one was signing was already answered "expired".
+        func finish(_ response: SignOnResponse) {
+            guard signOnRequest?.nonce == request.nonce else { return }
+            finishSignOn(response, nonce: request.nonce, consumer: request.consumer)
+        }
         do {
             let now = Int64(Date().timeIntervalSince1970)
             let input = DeviceAssertion.signingInput(
@@ -583,14 +590,14 @@ final class AppModel {
                     try? PairingStore.save(updated)
                     self.account = updated
                 }
-                finishSignOn(.ok(idToken: idToken), nonce: request.nonce, consumer: request.consumer)
+                finish(.ok(idToken: idToken))
             case .failure(let message):
-                finishSignOn(.error(message), nonce: request.nonce, consumer: request.consumer)
+                finish(.error(message))
             }
         } catch UserPresenceError.cancelled {
-            finishSignOn(.cancelled, nonce: request.nonce, consumer: request.consumer)
+            finish(.cancelled)
         } catch {
-            finishSignOn(.error(error.localizedDescription), nonce: request.nonce, consumer: request.consumer)
+            finish(.error(error.localizedDescription))
         }
     }
 
