@@ -44,14 +44,16 @@ enum TotpError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .invalid(let message): message
-        case .shortSecret: "Setup key is too short (minimum 16 decoded bytes). Set up this account again at its service using a new key. Keep your recovery codes until the new setup works."
+        case .shortSecret: "Setup key is too short (minimum 10 decoded bytes, 80 bits). Set up this account again at its service using a new key. Keep your recovery codes until the new setup works."
         }
     }
 }
 
 enum TotpGenerator {
-    // RFC 4226 requires at least 128 key bits and recommends 160.
-    static let minimumSecretBytes = 16
+    // The issuer chooses the key length: RFC 4226's 128-bit floor is a requirement on the
+    // issuer, so KyAuth accepts 80-bit keys (common in the wild) and warns on the row.
+    static let minimumSecretBytes = 10
+    static let recommendedSecretBytes = 16
     private static let alphabet = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567")
     private static let pow10: [UInt32] = [1, 10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000]
 
@@ -88,6 +90,12 @@ enum TotpGenerator {
     /// Import and generation policy; decoding a legacy vault remains lossless.
     static func isUsableSecret(_ secret: String) -> Bool {
         (try? validatedSecret(secret)) != nil
+    }
+
+    /// A usable key shorter than RFC 4226's 128 bits: codes work, the row warns.
+    static func isShortSecret(_ secret: String) -> Bool {
+        guard let decoded = try? validatedSecret(secret) else { return false }
+        return decoded.count < recommendedSecretBytes
     }
 
     static func validatedSecret(_ secret: String) throws -> Data {

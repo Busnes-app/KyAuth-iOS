@@ -72,7 +72,7 @@ struct DemoModeTests {
         #expect(throws: TotpError.shortSecret) { try model.addEntry(decoded) }
         #expect(throws: TotpError.shortSecret) { try model.updateEntry(decoded) }
         #expect(model.entries == original)
-        model.copy("123456", entry: decoded)
+        model.copy(decoded)
         #expect(model.notice == TotpError.shortSecret.localizedDescription)
         var renamed = original[0]
         renamed.title = "Renamed"
@@ -87,14 +87,27 @@ struct DemoModeTests {
         let model = AppModel(account: nil)
         model.startDemo()
         let entry = model.entries[0]
-        model.copy("123456", entry: entry)
+        let now = Date()
+        model.copy(entry, now: now)
         model.lock(leavingApp: true)
-        #expect(UIPasteboard.general.string == "123456")
+        #expect(UIPasteboard.general.string == (try TotpGenerator.code(entry, at: Int64(now.timeIntervalSince1970))))
 
         model.startDemo()
-        model.copy("654321", entry: entry)
+        model.copy(entry)
         model.lock()
         #expect(UIPasteboard.general.string == nil)
+    }
+
+    /// A tap just after a period ends copies the new period's code, not the one last drawn.
+    @Test func copyTakesTheCodeAtTheMomentOfCopying() throws {
+        let model = AppModel(account: nil)
+        model.startDemo()
+        let entry = model.entries[0]
+        // The start of the next period: its code, and an expiry still ahead when the test reads it.
+        let start = (Int64(Date().timeIntervalSince1970) / entry.periodSeconds + 1) * entry.periodSeconds
+        model.copy(entry, now: Date(timeIntervalSince1970: TimeInterval(start)))
+        #expect(UIPasteboard.general.string == (try TotpGenerator.code(entry, at: start)))
+        model.lock()
     }
 
     /// Lock, the idle lock and the PIN screen's Cancel must not unlock again on their own.

@@ -80,8 +80,8 @@ struct TotpUriParserTests {
 struct TotpKeyStrengthTests {
     @Test func importsEnforceDecodedBytesForEveryAlgorithm() throws {
         for algorithm in TotpEntry.Algorithm.allCases {
-            // 24 Base32 characters carry 15 bytes; 26 carry 16 bytes.
-            for secret in ["", "A", "MY", String(repeating: "A", count: 24)] {
+            // 15 Base32 characters carry 9 bytes; 16 carry 10 bytes (80 bits).
+            for secret in ["", "A", "MY", String(repeating: "A", count: 15)] {
                 #expect(throws: TotpError.self) {
                     try TotpEntry(title: "Account", secretBase32: secret, algorithm: algorithm)
                 }
@@ -89,8 +89,8 @@ struct TotpKeyStrengthTests {
                     try TotpUriParser.parse("otpauth://totp/Account?secret=\(secret)&algorithm=\(algorithm.rawValue)")
                 }
             }
-            let floor = String(repeating: "A", count: 26)
-            #expect(try TotpGenerator.base32Decode(floor).count == 16)
+            let floor = String(repeating: "A", count: 16)
+            #expect(try TotpGenerator.base32Decode(floor).count == 10)
             let entry = try TotpEntry(title: "Account", secretBase32: floor, algorithm: algorithm)
             #expect(try TotpGenerator.code(entry, at: 59).count == 6)
             #expect(try TotpUriParser.parse("otpauth://totp/Account?secret=\(floor)&algorithm=\(algorithm.rawValue)").algorithm == algorithm)
@@ -100,7 +100,7 @@ struct TotpKeyStrengthTests {
     @Test func generationRefusesWeakMutableOrDecodedEntries() throws {
         for algorithm in TotpEntry.Algorithm.allCases {
             var entry = try TotpEntry(title: "Account", secretBase32: String(repeating: "A", count: 26), algorithm: algorithm)
-            for secret in ["MY", String(repeating: "A", count: 24)] {
+            for secret in ["MY", String(repeating: "A", count: 15)] {
                 entry.secretBase32 = secret
                 #expect(throws: TotpError.self) { try TotpGenerator.code(entry, at: 59) }
                 let decoded = try JSONDecoder().decode(TotpEntry.self, from: JSONEncoder().encode(entry))
@@ -108,6 +108,22 @@ struct TotpKeyStrengthTests {
                 #expect(throws: TotpError.self) { try TotpGenerator.code(decoded, at: 59) }
             }
         }
+    }
+
+    @Test func eightyBitKeysWorkWithAWarning() throws {
+        // A 16-character key (80 bits), as many services issue, adds, generates and is flagged.
+        let short = "JBSWY3DPEHPK3PXP"
+        let entry = try TotpEntry(title: "Account", secretBase32: short)
+        #expect(try TotpGenerator.code(entry, at: 59).count == 6)
+        #expect(try TotpUriParser.parse("otpauth://totp/Account?secret=\(short)").secretBase32 == short)
+        #expect(TotpGenerator.isShortSecret(short))
+        // 26 characters carry 16 bytes: no warning. Unusable keys are refused, not flagged.
+        #expect(!TotpGenerator.isShortSecret(String(repeating: "A", count: 26)))
+        #expect(TotpGenerator.isShortSecret(String(repeating: "A", count: 25)))
+        #expect(!TotpGenerator.isShortSecret("MY"))
+        // An entry already in the vault with an 80-bit key keeps producing codes.
+        let decoded = try JSONDecoder().decode(TotpEntry.self, from: JSONEncoder().encode(entry))
+        #expect(try TotpGenerator.code(decoded, at: 59) == TotpGenerator.code(entry, at: 59))
     }
 
     @Test func legacyRecordsStayReadableBesideStrongRecords() throws {

@@ -187,8 +187,9 @@ struct TotpRow: View {
             let now = Int64(context.date.timeIntervalSince1970)
             let code = try? TotpGenerator.code(entry, at: now)
             let remaining = TotpGenerator.secondsRemaining(entry, at: now)
+            let isShort = TotpGenerator.isShortSecret(entry.secretBase32)
             Button {
-                if let code { model.copy(code, entry: entry) }
+                if code != nil { model.copy(entry) }
             } label: {
                 HStack(spacing: 14) {
                     VStack(alignment: .leading, spacing: 4) {
@@ -204,6 +205,9 @@ struct TotpRow: View {
                             Text("Set up this account again at its service using a new key. Keep your recovery codes until it works.")
                                 .font(AppFont.ui(.subheadline))
                                 .foregroundStyle(.secondary)
+                        } else if isShort {
+                            StatusLabel("Short setup key. If the service offers a longer one, set this account up again.", .warning)
+                                .font(AppFont.ui(.subheadline))
                         }
                     }
                     Spacer()
@@ -216,7 +220,7 @@ struct TotpRow: View {
             .buttonStyle(.plain)
             .disabled(code == nil)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(code.map { "\(entry.title), code \($0.map(String.init).joined(separator: " ")), \(remaining) seconds left" }
+            .accessibilityLabel(code.map { "\(entry.title), code \($0.map(String.init).joined(separator: " ")), \(remaining) seconds left\(isShort ? ". Short setup key" : "")" }
                 ?? "\(entry.title), code unavailable. Set up this account again at its service using a new key. Keep your recovery codes until it works.")
             .accessibilityHint(code == nil ? "" : "Copies the code")
         }

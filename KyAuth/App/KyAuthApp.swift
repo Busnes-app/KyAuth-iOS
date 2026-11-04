@@ -22,6 +22,11 @@ struct KyAuthApp: App {
                 delegate.model.checkIdle()
                 delegate.model.retryUnsentResponses()
                 Task { await delegate.model.refreshPendingChallenge() }
+                // Back from another app with the lock screen already up: its own task does not rerun.
+                Task {
+                    try? await Task.sleep(for: .milliseconds(400))
+                    await delegate.model.autoUnlock()
+                }
             default:
                 break
             }

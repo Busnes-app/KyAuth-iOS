@@ -42,9 +42,7 @@ struct LockView: View {
         .task {
             // A launch from a notification or a sign-on link delivers it just after the first frame.
             try? await Task.sleep(for: .milliseconds(400))
-            guard model.promptsUnlockOnLaunch, model.pendingChallenge == nil, model.signOnRequest == nil,
-                  model.takeAutoUnlock() else { return }
-            await model.unlock()
+            await model.autoUnlock()
         }
     }
 }

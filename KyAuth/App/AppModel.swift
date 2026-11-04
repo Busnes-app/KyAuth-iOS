@@ -50,6 +50,8 @@ final class AppModel {
     /// A pairing is talking to Apple Push or KyIdentity. Held here, not in the form, because a lock
     /// rebuilds the form while the pairing goes on.
     private(set) var isPairing = false
+    /// Bumped by unpair and erase, so a pairing still in flight cannot save itself afterwards.
+    private var pairingGeneration = 0
     /// The lock screen prompts on its own only at launch and after leaving KyAuth, never after Lock,
     /// the idle lock or the PIN screen's Cancel, which would unlock again at once.
     private var autoUnlockArmed = true
@@ -221,6 +223,16 @@ final class AppModel {
         return autoUnlockArmed
     }
 
+    /// The lock screen's own prompt, at launch and on returning to KyAuth. Only while active: a
+    /// lock screen built in the background must not use up the prompt meant for the return. A
+    /// pending request uses it up without prompting, so a later activation does not prompt either.
+    func autoUnlock() async {
+        guard lockState == .locked, UIApplication.shared.applicationState == .active,
+              promptsUnlockOnLaunch, takeAutoUnlock(),
+              pendingChallenge == nil, signOnRequest == nil else { return }
+        await unlock()
+    }
+
     func recordActivity() {
         guard lockState != .locked else { return }
         if !idleLock.activity(now: ProcessInfo.processInfo.systemUptime, timeout: TimeInterval(idleMinutes * 60)) {
@@ -267,15 +279,18 @@ final class AppModel {
     }
 
     /// Copies a code for this device only; it expires when its period ends or when KyAuth locks.
-    func copy(_ code: String, entry: TotpEntry) {
-        guard TotpGenerator.isUsableSecret(entry.secretBase32) else {
+    /// The code and its expiry come from one clock reading, so a tap just after a period ends never
+    /// copies the previous code with a fresh period's lifetime.
+    func copy(_ entry: TotpEntry, now: Date = Date()) {
+        let epoch = Int64(now.timeIntervalSince1970)
+        guard let code = try? TotpGenerator.code(entry, at: epoch) else {
             notice = TotpError.shortSecret.localizedDescription
             return
         }
-        let remaining = TotpGenerator.secondsRemaining(entry, at: Int64(Date().timeIntervalSince1970))
+        let remaining = TotpGenerator.secondsRemaining(entry, at: epoch)
         UIPasteboard.general.setItems(
             [[UTType.plainText.identifier: code]],
-            options: [.localOnly: true, .expirationDate: Date().addingTimeInterval(TimeInterval(remaining))]
+            options: [.localOnly: true, .expirationDate: now.addingTimeInterval(TimeInterval(remaining))]
         )
         copiedChangeCount = UIPasteboard.general.changeCount
         notice = "Code copied"
@@ -309,7 +324,19 @@ final class AppModel {
 
     private func register(_ pairing: QrPairing, deviceName: String) async throws {
         if isDemo { lock() }
+        let generation = pairingGeneration
+        func stillWanted() throws {
+            guard generation == pairingGeneration else {
+                throw PairingError.invalid("Pairing stopped: KyAuth was unpaired or erased meanwhile.")
+            }
+        }
         let pushToken = try await pushTokenForPairing()
+        try stillWanted()
+        // The code may have expired while the form waited for a tap or for Apple Push: refuse it
+        // before the working pairing is cleared.
+        if let expires = pairing.expiresAtEpochSeconds, expires <= Int64(Date().timeIntervalSince1970) {
+            throw PairingError.invalid("Pairing credential has expired")
+        }
         guard UserPresence.deviceHasPasscode else { throw UserPresenceError.noPasscode }
         // The old pairing goes first: once its key is replaced it can answer nothing, so any
         // failure from here on must leave the phone unpaired.
@@ -320,6 +347,7 @@ final class AppModel {
             let pushKeys = PushKeys.generate()
             try PushKeyStore.save(pushKeys)
             let attestation = await AppAttestor.attest(credential: pairing.credential, publicKey: publicKey)
+            try stillWanted()
             let paired = try await PairingClient().register(
                 pairing: pairing,
                 deviceName: deviceName,
@@ -329,6 +357,7 @@ final class AppModel {
                 publicKey: publicKey,
                 appAttest: attestation
             )
+            try stillWanted()
             try PairingStore.save(paired)
             PushStore.update { $0.registeredToken = pushToken }
             pushState = PushStore.load()
@@ -371,6 +400,7 @@ final class AppModel {
 
     /// Forgets the pairing on this phone. KyIdentity keeps the device until it is removed there.
     func unpair() {
+        pairingGeneration += 1
         DeviceSigningKey.delete()
         clearPairingState()
     }
@@ -545,8 +575,10 @@ final class AppModel {
         defer { retryUnsentResponses() }
         do {
             let request = try handoff.take(nonce: nonce, paired: account, now: now)
-            if let current = signOnRequest, now.timeIntervalSince(current.createdAt) > Self.consumerWait {
-                // Its consumer stopped waiting: answer it without leaving KyAuth, and take the new one.
+            if let current = signOnRequest,
+               current.consumer == request.consumer || now.timeIntervalSince(current.createdAt) > Self.consumerWait {
+                // Its consumer stopped waiting, or asked again and so waits only for the new nonce:
+                // answer it without leaving KyAuth, and take the new one.
                 signOnRequest = nil
                 deliver(.error(SignOnRefusal.expired.errorDescription ?? ""), nonce: current.nonce, consumer: current.consumer)
             }
@@ -565,8 +597,16 @@ final class AppModel {
         }
     }
 
-    func approveSignOn() async {
+    func approveSignOn(now: Date = Date()) async {
         guard let request = signOnRequest, let account, let userId = account.userId else { return }
+        // Its consumer stopped waiting: an ID token for it would be thrown away.
+        if now.timeIntervalSince(request.createdAt) > Self.consumerWait {
+            let expired = SignOnRefusal.expired.errorDescription ?? ""
+            signOnRequest = nil
+            deliver(.error(expired), nonce: request.nonce, consumer: request.consumer)
+            signOnNotice = expired
+            return
+        }
         // A request replaced while this one was signing was already answered "expired".
         func finish(_ response: SignOnResponse) {
             guard signOnRequest?.nonce == request.nonce else { return }
@@ -664,6 +704,7 @@ final class AppModel {
     }
 
     func eraseAllData() {
+        pairingGeneration += 1
         lock()
         LocalWipe.eraseAll()
         pairingDraft = nil

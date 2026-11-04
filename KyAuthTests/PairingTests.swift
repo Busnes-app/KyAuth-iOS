@@ -81,6 +81,22 @@ struct PairingFormTests {
         #expect(!model.isPairing)
         #expect(model.pairingDraft?.error != nil)
     }
+
+    /// A scanned code that expired while it waited for a tap leaves the working pairing alone.
+    @Test func anExpiredCodeKeepsTheCurrentPairing() async throws {
+        let account = PairedAccount(
+            serverUrl: "https://id.example.com", deviceId: "d", deviceName: "iPhone", userId: "u", canSignOn: true
+        )
+        let model = AppModel(account: account, pushState: PushState(latestToken: "ab"))
+        let pairing = try QrPairing(
+            serverUrl: "https://id.example.com", pairingToken: "pt-1",
+            expiresAtEpochSeconds: Int64(Date().timeIntervalSince1970) - 1
+        )
+        await #expect(throws: PairingError.invalid("Pairing credential has expired")) {
+            try await model.pair(pairing, deviceName: "Test")
+        }
+        #expect(model.account == account)
+    }
 }
 
 @MainActor

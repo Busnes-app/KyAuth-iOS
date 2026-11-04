@@ -144,18 +144,22 @@ that moves one must update this page in the same change.
 
 ## TOTP key floor and legacy data
 
-`KyAuth/Totp/TotpEntry.swift` requires at least 16 decoded key bytes for imports and
-before every HMAC generation (RFC 4226). `AppModel` applies the same validation at
-add/replacement/copy boundaries; metadata edits may retain an exact existing secret.
-Synthesized Codable decoding intentionally preserves legacy records so one short
-key cannot make the whole vault unreadable. `TotpVault` format and AES-256-GCM key
-are unchanged. Short-key rows hide countdown/copy controls and explain issuer
+`KyAuth/Totp/TotpEntry.swift` requires at least 10 decoded key bytes (80 bits) for
+imports and before every HMAC generation. RFC 4226's 128-bit requirement is on the
+issuer, which chooses the key length: a key of 10 to 15 bytes is accepted for new,
+replaced and existing accounts, and its row shows a short-key warning
+(`TotpGenerator.isShortSecret`), because refusing it would only make the account
+impossible to add. `AppModel` applies the same validation at add/replacement/copy
+boundaries; metadata edits may retain an exact existing secret.
+Synthesized Codable decoding intentionally preserves legacy records so one key below
+the floor cannot make the whole vault unreadable. `TotpVault` format and AES-256-GCM key
+are unchanged. Rows below the floor hide countdown/copy controls and explain issuer
 re-enrolment; neither padding nor silent key rotation could preserve the issuer's
 codes. Existing no-export/no-sync and recovery-custody contracts remain.
 
-Evidence: `TotpTests` covers decoded 15/16-byte boundaries, every supported HMAC
+Evidence: `TotpTests` covers decoded 9/10-byte refusal and 15/16-byte warning boundaries, every supported HMAC
 algorithm, RFC 6238 vectors, mutable/decoded bypass attempts and mixed-record JSON
-round trips. `TotpVaultTests.mixedLegacyVaultKeepsEveryRecordAndSecret` checks an
+round trips (`TotpKeyStrengthTests.eightyBitKeysWorkWithAWarning`). `TotpVaultTests.mixedLegacyVaultKeepsEveryRecordAndSecret` checks an
 encrypted mixed vault; `DemoModeTests.modelRefusesWeakAddsReplacementsAndCopies`
 checks the app boundary. Native tests run in `.github/workflows/tests.yml`; the
 portable Docker harness exercises TOTP/push source with swift-crypto. These tests
