@@ -235,7 +235,9 @@ struct SignOnBusyTests {
         try JSONSerialization.data(withJSONObject: json).write(to: root.appendingPathComponent("requests/\(nonce).json"))
     }
 
-    @Test func aFailedBusyAnswerIsKeptForRetryAndTheActiveSignInStays() throws {
+    /// The consumer waits only for its newest nonce, so asking again replaces the sign-in on screen.
+    /// The replaced one's answer is kept for retry when it cannot be written.
+    @Test func aRetryFromTheSameAppReplacesTheSignInAndAFailedAnswerIsKept() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let model = AppModel(account: paired, makeHandoff: { SignOnHandoff(root: root) })
         let a = nonce("A"), b = nonce("B")
@@ -248,17 +250,17 @@ struct SignOnBusyTests {
         // A file where the responses directory belongs makes every response write fail.
         try Data().write(to: root.appendingPathComponent("responses"))
         model.handleOpenURL(URL(string: "kyauth://signon?nonce=\(b)")!)
-        #expect(model.signOnRequest?.nonce == a)
-        #expect(model.unsentResponseNonces == [b])
+        #expect(model.signOnRequest?.nonce == b)
+        #expect(model.unsentResponseNonces == [a])
 
         try FileManager.default.removeItem(at: root.appendingPathComponent("responses"))
         model.retryUnsentResponses()
         #expect(model.unsentResponseNonces.isEmpty)
         let written = try JSONSerialization.jsonObject(
-            with: Data(contentsOf: root.appendingPathComponent("responses/\(b).json"))
+            with: Data(contentsOf: root.appendingPathComponent("responses/\(a).json"))
         ) as? [String: Any]
         #expect(written?["status"] as? String == "error")
-        #expect(model.signOnRequest?.nonce == a)
+        #expect(model.signOnRequest?.nonce == b)
 
         model.retryUnsentResponses(now: Date().addingTimeInterval(1000))
         try? FileManager.default.removeItem(at: root)
@@ -285,6 +287,25 @@ struct SignOnBusyTests {
         try? FileManager.default.removeItem(at: root)
     }
 
+    /// Signing in after the consumer gave up would mint a token nobody reads.
+    @Test func signInAfterTheConsumerGaveUpAnswersExpired() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let model = AppModel(account: paired, makeHandoff: { SignOnHandoff(root: root) })
+        let a = nonce("G")
+        try writeRequest(a, root: root, createdAt: Date().addingTimeInterval(-100))
+        model.handleOpenURL(URL(string: "kyauth://signon?nonce=\(a)")!)
+        #expect(model.signOnRequest?.nonce == a)
+
+        await model.approveSignOn(now: Date().addingTimeInterval(81))
+        #expect(model.signOnRequest == nil)
+        #expect(model.signOnNotice == SignOnRefusal.expired.errorDescription)
+        let written = try JSONSerialization.jsonObject(
+            with: Data(contentsOf: root.appendingPathComponent("responses/\(a).json"))
+        ) as? [String: Any]
+        #expect(written?["status"] as? String == "error")
+        try? FileManager.default.removeItem(at: root)
+    }
+
     @Test func unsentAnswersExpireWithTheConsumersWait() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let model = AppModel(account: paired, makeHandoff: { SignOnHandoff(root: root) })
@@ -294,7 +315,7 @@ struct SignOnBusyTests {
         model.handleOpenURL(URL(string: "kyauth://signon?nonce=\(a)")!)
         try Data().write(to: root.appendingPathComponent("responses"))
         model.handleOpenURL(URL(string: "kyauth://signon?nonce=\(b)")!)
-        #expect(model.unsentResponseNonces == [b])
+        #expect(model.unsentResponseNonces == [a])
         model.retryUnsentResponses(now: Date().addingTimeInterval(181))
         #expect(model.unsentResponseNonces.isEmpty)
         try? FileManager.default.removeItem(at: root)

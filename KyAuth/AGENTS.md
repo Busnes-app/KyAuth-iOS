@@ -87,7 +87,8 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   reopens after unlock: pairing by link or by hand means leaving KyAuth. Pairing waits up to 15 s
   for an APNs token and fails with Apple Push's reason when it refuses. One pairing at a time
   (`AppModel.isPairing`); its spinner and error live in the model and the draft, so a lock does not
-  lose them.
+  lose them. Unpair and erase stop a pairing in flight before it saves anything; an expired code is
+  refused before the current pairing is cleared.
 - `otpauth://` defaults apply only to omitted parameters; an unsupported algorithm or a malformed
   or valueless `digits`/`period`/`algorithm` is refused.
 - Secrets are typed only into secure fields (setup key, PINs), and third-party keyboards are
@@ -96,8 +97,9 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   the `canSignOn` saved at pairing, which goes stale when the devices page changes it. A successful
   sign-on records it as on, for Settings.
 - One sign-on at a time: a request arriving during another is answered with a busy error, unless the
-  one on screen is older than the consumer's 180 s wait: that one is answered "expired" without
-  leaving KyAuth and the new one replaces it.
+  one on screen is from the same consumer (which waits only for its newest nonce) or older than the
+  consumer's 180 s wait: that one is answered "expired" without leaving KyAuth and the new one
+  replaces it. Sign In on a request older than 180 s answers "expired" without signing.
   KyAuth does not switch to its consumer while a sign-in is on screen. A sign-on answer that cannot
   be written is kept in memory and retried (on activation and on the next sign-on link) until the
   consumer's 180 s wait ends; the request file is already consumed, so the answer is never dropped.
@@ -106,7 +108,8 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   their period; leaving KyAuth keeps one so it can be pasted (as on Android), any other lock clears
   it. The app switcher and screen capture show a cover over the app and every sheet
   (`privacyCovered()` on each sheet's content). The lock screen prompts for Face ID on its own only
-  at launch and after leaving KyAuth, never after Lock, the idle lock or the PIN screen's Cancel.
+  at launch and on returning to KyAuth (`AppModel.autoUnlock`, only while active), never after Lock,
+  the idle lock or the PIN screen's Cancel. Copy takes the code and its expiry from one clock reading.
 - The request card is keyed by challenge ID, so a new request never inherits typed digits.
 - Optional PIN after Face ID: delays 0/5/30/300 s on system uptime (a restart restarts the delay,
   never shortens it), the fifth failure erases all local data. A PIN whose verifier is gone with

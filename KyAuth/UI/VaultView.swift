@@ -189,7 +189,7 @@ struct TotpRow: View {
             let remaining = TotpGenerator.secondsRemaining(entry, at: now)
             let isShort = TotpGenerator.isShortSecret(entry.secretBase32)
             Button {
-                if let code { model.copy(code, entry: entry) }
+                if code != nil { model.copy(entry) }
             } label: {
                 HStack(spacing: 14) {
                     VStack(alignment: .leading, spacing: 4) {
