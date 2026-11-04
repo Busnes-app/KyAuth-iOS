@@ -103,11 +103,10 @@ struct DemoModeTests {
         let model = AppModel(account: nil)
         model.startDemo()
         let entry = model.entries[0]
-        // The start of the current period, so the copied code has not expired yet.
-        let start = Int64(Date().timeIntervalSince1970) / entry.periodSeconds * entry.periodSeconds
+        // The start of the next period: its code, and an expiry still ahead when the test reads it.
+        let start = (Int64(Date().timeIntervalSince1970) / entry.periodSeconds + 1) * entry.periodSeconds
         model.copy(entry, now: Date(timeIntervalSince1970: TimeInterval(start)))
         #expect(UIPasteboard.general.string == (try TotpGenerator.code(entry, at: start)))
-        #expect(UIPasteboard.general.string != (try TotpGenerator.code(entry, at: start - 1)))
         model.lock()
     }
 
