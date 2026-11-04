@@ -69,11 +69,13 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 - TOTP vault: AES-256-GCM file excluded from backup, key in a `.userPresence`,
   `WhenPasscodeSetThisDeviceOnly` Keychain item. No backup, export or sync, by decision. A device
   without a passcode cannot use KyAuth.
-- New/imported/replaced TOTP keys require 16 decoded bytes (RFC 4226). Generation checks
-  the same floor, including Codable-restored or mutable entries. Keep legacy vault records and
-  their exact secrets readable/editable/deletable; metadata edits may retain an unchanged
-  secret. Never pad, replace or drop one silently. Short-key rows explain issuer re-enrolment,
-  hide countdowns and refuse copy/generation. No export or sync is added.
+- New/imported/replaced and existing TOTP keys need 10 decoded bytes (80 bits); generation
+  checks the same floor, including Codable-restored or mutable entries. Keys of 10-15 bytes work
+  and their rows show a short-key warning: the issuer chooses the length (RFC 4226's 128 bits is
+  on the issuer). Keep records below the floor and their exact secrets readable/editable/deletable;
+  metadata edits may retain an unchanged secret. Never pad, replace or drop one silently. Rows
+  below the floor explain issuer re-enrolment, hide countdowns and refuse copy/generation. No
+  export or sync is added.
 - Keychain items are this-device-only and never synced; a fresh install erases leftovers.
 - Only an absent vault file loads as empty; an empty or unreadable file is an error and saving
   stays disabled, so a write can never replace entries that failed to load.

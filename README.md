@@ -23,12 +23,15 @@ not exercise a server, APNs or a real vault.
 
 ## TOTP key requirements and updates
 
-New setup keys need at least **16 decoded bytes** (128 bits); RFC 4226 recommends
-20 bytes. Base32 text length alone is not the policy: spaces, case and padding do
-not add key material. Obtain a fresh setup key from the account's service when it
-is too short; do not pad, hash, repeat or replace an existing issuer's key yourself.
+Setup keys need at least **10 decoded bytes** (80 bits). Keys shorter than 16 bytes
+(128 bits) are accepted, for new, replaced and existing accounts, and their rows show a
+short-key warning: the service chooses the key length, and RFC 4226's 128-bit
+requirement is on the issuer, so refusing a key the service issued would only make
+that account impossible to add. Base32 text length alone is not the policy: spaces,
+case and padding do not add key material. Do not pad, hash, repeat or replace an
+issuer's key yourself; if the service offers a longer key, set the account up again.
 
-Existing short-key entries stay in the encrypted vault with their names, notes,
+Entries with a key under 10 bytes stay in the encrypted vault with their names, notes,
 issuer and exact secret. They cannot generate or copy codes, and their rows explain
 how to set the account up again at its service. You can still edit metadata or
 delete an entry. Keep the service's recovery codes and another authorized sign-in
