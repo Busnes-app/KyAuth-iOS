@@ -224,11 +224,12 @@ final class AppModel {
     }
 
     /// The lock screen's own prompt, at launch and on returning to KyAuth. Only while active: a
-    /// lock screen built in the background must not use up the prompt meant for the return.
+    /// lock screen built in the background must not use up the prompt meant for the return. A
+    /// pending request uses it up without prompting, so a later activation does not prompt either.
     func autoUnlock() async {
         guard lockState == .locked, UIApplication.shared.applicationState == .active,
-              promptsUnlockOnLaunch, pendingChallenge == nil, signOnRequest == nil,
-              takeAutoUnlock() else { return }
+              promptsUnlockOnLaunch, takeAutoUnlock(),
+              pendingChallenge == nil, signOnRequest == nil else { return }
         await unlock()
     }
 

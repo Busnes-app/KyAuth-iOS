@@ -87,9 +87,10 @@ struct DemoModeTests {
         let model = AppModel(account: nil)
         model.startDemo()
         let entry = model.entries[0]
-        model.copy(entry)
+        let now = Date()
+        model.copy(entry, now: now)
         model.lock(leavingApp: true)
-        #expect(UIPasteboard.general.string == (try TotpGenerator.code(entry, at: Int64(Date().timeIntervalSince1970))))
+        #expect(UIPasteboard.general.string == (try TotpGenerator.code(entry, at: Int64(now.timeIntervalSince1970))))
 
         model.startDemo()
         model.copy(entry)
@@ -102,10 +103,11 @@ struct DemoModeTests {
         let model = AppModel(account: nil)
         model.startDemo()
         let entry = model.entries[0]
-        let boundary = Date(timeIntervalSince1970: 1_800_000_000)
-        model.copy(entry, now: boundary)
-        #expect(UIPasteboard.general.string == (try TotpGenerator.code(entry, at: 1_800_000_000)))
-        #expect(UIPasteboard.general.string != (try TotpGenerator.code(entry, at: 1_800_000_000 - 1)))
+        // The start of the current period, so the copied code has not expired yet.
+        let start = Int64(Date().timeIntervalSince1970) / entry.periodSeconds * entry.periodSeconds
+        model.copy(entry, now: Date(timeIntervalSince1970: TimeInterval(start)))
+        #expect(UIPasteboard.general.string == (try TotpGenerator.code(entry, at: start)))
+        #expect(UIPasteboard.general.string != (try TotpGenerator.code(entry, at: start - 1)))
         model.lock()
     }
 
