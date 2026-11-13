@@ -268,6 +268,19 @@ When the user requests a durable behavior change, record it here or in the relev
   tested; it never becomes a general claim about Apple TLS, and the fixture and
   its host calibration stay in the suite.
 
+- `.github/workflows/fuzz.yml` runs `Fuzz/`, a Linux-only SwiftPM libFuzzer
+  harness for `ScannedCode.parse` (QR setup and pairing codes), for 60 s on
+  pushes and pull requests to `master`, in a digest-pinned `swift` image (Xcode
+  ships no libFuzzer for Swift). It compiles `QrPairing.swift`,
+  `PairingEndpoint.swift` and `TotpEntry.swift` through symlinks, so those
+  files must stay buildable with Foundation and CryptoKit only; on Linux the
+  package's `CryptoKit` module re-exports swift-crypto, pinned in
+  `Fuzz/Package.resolved`. Release configuration, so HTTPS only. Locally, in
+  that image, in `Fuzz/`: `swift build -c release --product FuzzScannedCode
+  -Xswiftc -sanitize=fuzzer,address -Xswiftc -parse-as-library`, then
+  `.build/release/FuzzScannedCode <scratch-dir> Corpus/ScannedCode`. A crashing
+  input stays in `Fuzz/Corpus/ScannedCode` as a seed with its fix.
+
 - `.github/workflows/release.yml` uploads to App Store Connect on a `v*` tag, behind the
   `release` environment (setup and secrets in its header). It uploads the project's own
   `CURRENT_PROJECT_VERSION`, never a computed one. `scripts/verify-version.sh [tag]` fails on

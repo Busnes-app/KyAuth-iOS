@@ -1,0 +1,1 @@
+{"type":"kypost_device_pairing","serverUrl":"https://id.example.com","pinCode":"123456","userId":"u-9"}

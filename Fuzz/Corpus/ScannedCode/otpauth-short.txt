@@ -1,0 +1,1 @@
+otpauth://totp/Mail?secret=JBSWY3DPEHPK3PXP====&issuer=Mail

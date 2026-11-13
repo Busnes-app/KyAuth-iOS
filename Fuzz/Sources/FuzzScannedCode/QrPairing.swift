@@ -1,0 +1,1 @@
+../../../KyAuth/Pairing/QrPairing.swift
