@@ -1,0 +1,1 @@
+{"type":"kyidentity_device_pairing","serverUrl":"https://id.example.com","registrationUrl":"https://id.example.com/api/notifications/native/register","pairingToken":"pt-1","userId":"u-1","username":"ada","expiresAt":1900000000}

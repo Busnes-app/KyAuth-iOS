@@ -1,0 +1,1 @@
+kyidentity://native-pair?srv=https%3A%2F%2Fid.example.com&pin=123456&sub=u-9&user=ada&exp=1900000000

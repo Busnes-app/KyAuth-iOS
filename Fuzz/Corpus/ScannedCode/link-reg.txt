@@ -1,0 +1,1 @@
+kysignon://native-pair?srv=https%3A%2F%2Fid.example.com%3A8443%2F&reg=https%3A%2F%2Fid.example.com%3A8443%2Fapi%2Fnotifications%2Fnative%2Fregister&pt=t
