@@ -4,3 +4,5 @@ DerivedData/
 build/
 .DS_Store
 .tls-fixtures/
+# A bare `go build` in scripts/tls-fixtures writes this executable beside its source.
+/scripts/tls-fixtures/tlsfixtures
