@@ -10,7 +10,7 @@ archives=('*.jar' '*.war' '*.ear' '*.aar' '*.apk' '*.aab' '*.dex')
 # binary the repo must carry, with the reason beside it.
 excludes=(
 )
-found=$(git ls-files -z -- . ${excludes[@]+"${excludes[@]}"} | xargs -0 -r file --mime-type -- | grep -E "$types" || true)
+found=$(git ls-files -z -- . ${excludes[@]+"${excludes[@]}"} | sed -z 's|^|./|' | xargs -0 -r file --mime-type -- | grep -E "$types" || true)
 named=$(git ls-files -- "${archives[@]}" ${excludes[@]+"${excludes[@]}"})
 if [ -n "$found$named" ]; then
   echo "Compiled binaries are tracked; build them from source instead:" >&2
