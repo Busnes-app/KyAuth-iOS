@@ -6,3 +6,6 @@ build/
 .tls-fixtures/
 # A bare `go build` in scripts/tls-fixtures writes this executable beside its source.
 /scripts/tls-fixtures/tlsfixtures
+
+# Generated mdBook manual
+/docs/book/
