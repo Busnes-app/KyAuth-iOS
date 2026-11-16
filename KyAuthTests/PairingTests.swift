@@ -89,7 +89,7 @@ struct PairingFormTests {
         )
         let model = AppModel(account: account, pushState: PushState(latestToken: "ab"))
         let pairing = try QrPairing(
-            serverUrl: "https://id.example.com", pairingToken: "pt-1",
+            serverUrl: "https://id.example.com", pairingToken: "pt-1", userId: "u-1",
             expiresAtEpochSeconds: Int64(Date().timeIntervalSince1970) - 1
         )
         await #expect(throws: PairingError.invalid("Pairing credential has expired")) {
@@ -111,7 +111,7 @@ struct QrPairingParserTests {
         #expect(pairing.serverUrl == "https://id.example.com")
         #expect(pairing.pairingToken == "pt-1")
         #expect(pairing.username == "ada")
-        #expect(pairing.credential == "pt-1")
+        #expect(pairing.credential == "pair1:" + PushStore.hex(Data(SHA256.hash(data: Data("pt-1".utf8)))))
     }
 
     @Test func parsesDeepLinkWithPin() throws {
@@ -125,13 +125,17 @@ struct QrPairingParserTests {
 
     @Test func refusesUnknownTypeExpiredAndHttp() {
         #expect(throws: PairingError.self) {
-            try QrPairingParser.parse(#"{"type":"other","serverUrl":"https://id.example.com","pairingToken":"t"}"#)
+            try QrPairingParser.parse(#"{"type":"other","serverUrl":"https://id.example.com","pairingToken":"t","userId":"u"}"#)
         }
         #expect(throws: PairingError.self) {
-            try QrPairingParser.parse(#"{"type":"kyidentity_device_pairing","serverUrl":"https://id.example.com","pairingToken":"t","expiresAt":1}"#)
+            try QrPairingParser.parse(#"{"type":"kyidentity_device_pairing","serverUrl":"https://id.example.com","pairingToken":"t","userId":"u","expiresAt":1}"#)
         }
         #expect(throws: PairingError.self) {
-            try QrPairingParser.parse(#"{"type":"kyidentity_device_pairing","serverUrl":"http://id.example.com","pairingToken":"t"}"#)
+            try QrPairingParser.parse(#"{"type":"kyidentity_device_pairing","serverUrl":"http://id.example.com","pairingToken":"t","userId":"u"}"#)
+        }
+        // Pairing proof v1 sends the user ID instead of the token.
+        #expect(throws: PairingError.self) {
+            try QrPairingParser.parse(#"{"type":"kyidentity_device_pairing","serverUrl":"https://id.example.com","pairingToken":"t"}"#)
         }
         #expect(throws: PairingError.self) {
             try QrPairingParser.parse("kyidentity://native-pair?srv=https%3A%2F%2Fid.example.com&pin=1")
@@ -141,7 +145,7 @@ struct QrPairingParserTests {
 
     @Test func registrationUrlMustShareOrigin() throws {
         #expect(throws: PairingError.self) {
-            try QrPairingParser.parse(#"{"type":"kyidentity_device_pairing","serverUrl":"https://id.example.com","registrationUrl":"https://evil.example.com/api/notifications/native/register","pairingToken":"t"}"#)
+            try QrPairingParser.parse(#"{"type":"kyidentity_device_pairing","serverUrl":"https://id.example.com","registrationUrl":"https://evil.example.com/api/notifications/native/register","pairingToken":"t","userId":"u"}"#)
         }
         let ok = try PairingEndpoint.validatedRegistrationUrl(
             "https://id.example.com", "https://ID.example.com:443/api/notifications/native/register"
@@ -160,8 +164,8 @@ struct ScannedCodeTests {
 
     @Test func pairingCodesGoToPairing() throws {
         for raw in [
-            #"{"type":"kyidentity_device_pairing","serverUrl":"https://id.example.com","pairingToken":"t"}"#,
-            "kyidentity://native-pair?srv=https%3A%2F%2Fid.example.com&pt=t",
+            #"{"type":"kyidentity_device_pairing","serverUrl":"https://id.example.com","pairingToken":"t","userId":"u"}"#,
+            "kyidentity://native-pair?srv=https%3A%2F%2Fid.example.com&pt=t&sub=u",
         ] {
             guard case .pairing(let pairing) = try ScannedCode.parse(raw) else { Issue.record("expected pairing: \(raw)"); continue }
             #expect(pairing.serverUrl == "https://id.example.com")
@@ -169,7 +173,7 @@ struct ScannedCodeTests {
     }
 
     @Test func badPairingCodeSaysWhyAndOtherCodesAreRefused() {
-        let expired = #"{"type":"kyidentity_device_pairing","serverUrl":"https://id.example.com","pairingToken":"t","expiresAt":1}"#
+        let expired = #"{"type":"kyidentity_device_pairing","serverUrl":"https://id.example.com","pairingToken":"t","userId":"u","expiresAt":1}"#
         #expect(throws: PairingError.self) { try ScannedCode.parse(expired) }
         #expect(throws: TotpError.self) { try ScannedCode.parse("https://example.com") }
         #expect(throws: TotpError.self) { try ScannedCode.parse("otpauth://hotp/x?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP") }
@@ -214,7 +218,9 @@ struct PairingClientTests {
         #expect(body["platform"] as? String == "ios")
         #expect(body["deviceName"] as? String == "Ada's iPhone")
         #expect(body["pushToken"] as? String == "abcd")
-        #expect(body["pairingToken"] as? String == "pt")
+        #expect(body["pairingToken"] == nil)
+        #expect(body["pinCode"] == nil)
+        #expect(body["userId"] as? String == "u-1")
         #expect(body["pushTransport"] == nil)
         #expect(body["pushP256dh"] as? String == PushVectors.receiverP256dh)
         #expect(body["pushAuth"] as? String == PushVectors.auth)
@@ -261,6 +267,85 @@ struct PairingClientTests {
     @Test func appAttestClientDataBindsCredentialAndKey() {
         #expect(String(decoding: AppAttestor.clientData(credential: "pt", publicKey: "PK=="), as: UTF8.self)
             == "kyidentity-appattest-v1|pt|PK==")
+    }
+}
+
+/// Pairing proof v1. Golden vector shared with KyIdentity-server and KyAuth Android.
+@MainActor
+struct PairingProofTests {
+    let pairing = try! QrPairing(
+        serverUrl: "https://id.example.com", pairingToken: "00112233445566778899aabbccddeeff0011223344556677", userId: "user-1"
+    )
+    let request = Data(#"{"userId":"user-1","deviceName":"Pixel","deviceIdentifier":"inst-1","platform":"android","publicKey":"BAAA","pushToken":"tok","pushTransport":"fcm"}"#.utf8)
+    let response = Data((#"{"success":true,"deviceId":"dev-1","device":{"id":"dev-1"}}"# + "\n").utf8)
+    let reply = "zANXKOlyO1yxqAb2W4QqpkPWmL37PaXBKqaPjOlrJgY"
+    let cred = "pair1:6b374db4159ffa3ad74bcc886b8d70a0c421952f0dddb887820093e27044d8d4"
+
+    private func answer(_ proof: String?, body: Data? = nil, status: Int = 201) -> HTTPResponse {
+        HTTPResponse(status: status, body: body ?? response, headers: proof.map { ["kyidentity-pairing-proof": $0] } ?? [:])
+    }
+
+    @Test func matchesGoldenVector() throws {
+        let proof = try #require(try PairingProof(pairing))
+        #expect(proof.request(request) == "NbMaNQG2rujfajtoYLf01p2YnmfAW3EFm3_26roCDUc")
+        #expect(PairingProof.requestHash(request) == "cykwj-49G__TJq22JeLvRDBE4qzm3_BRgfznUMMoiag")
+        #expect(proof.acceptsReply(reply, request: request, response: response))
+        #expect(pairing.credential == cred)
+        #expect(String(decoding: AppAttestor.clientData(credential: pairing.credential, publicKey: "BAAA"), as: UTF8.self)
+            == "kyidentity-appattest-v1|\(cred)|BAAA")
+    }
+
+    @Test func originIsCanonical() throws {
+        let spelled = try QrPairing(
+            serverUrl: "https://ID.Example.com:443/", pairingToken: "00112233445566778899aabbccddeeff0011223344556677", userId: "user-1"
+        )
+        #expect(try #require(try PairingProof(spelled)).request(request) == "NbMaNQG2rujfajtoYLf01p2YnmfAW3EFm3_26roCDUc")
+    }
+
+    @Test func aVerifiedReplyIsRead() throws {
+        let proof = try PairingProof(pairing)
+        #expect(try PairingClient.acceptedReply(answer(reply), proof: proof, request: request)["deviceId"] as? String == "dev-1")
+    }
+
+    @Test func aMissingTamperedOrMisboundReplyIsRefused() throws {
+        let proof = try PairingProof(pairing)
+        let tampered = Data((#"{"success":true,"deviceId":"dev-2","device":{"id":"dev-1"}}"# + "\n").utf8)
+        let cases: [(HTTPResponse, Data)] = [
+            (answer(nil), request),
+            (answer(""), request),
+            (answer("not base64url!"), request),
+            (answer("A" + reply.dropFirst()), request),
+            (answer(reply, body: tampered), request),
+            (answer(reply, body: response.dropLast()), request),
+            (answer(reply), request + Data(" ".utf8)), // a reply to another request
+        ]
+        for (response, request) in cases {
+            #expect(throws: PairingError.invalid(PairingClient.unverifiedReply)) {
+                try PairingClient.acceptedReply(response, proof: proof, request: request)
+            }
+        }
+    }
+
+    @Test func refusalsKeepTheirMessage() throws {
+        let refusal = answer(nil, body: Data(#"{"error":"registration_failed","error_description":"Invalid token"}"#.utf8), status: 400)
+        #expect(throws: PairingError.invalid("Invalid token")) {
+            try PairingClient.acceptedReply(refusal, proof: try PairingProof(pairing), request: request)
+        }
+    }
+
+    /// PIN pairing stays trust on first use, byte for byte as before pairing proof v1.
+    @Test func pinPairingIsUnchanged() throws {
+        let pin = try QrPairing(serverUrl: "https://id.example.com", pinCode: "123456", userId: "u-1")
+        #expect(try PairingProof(pin) == nil)
+        #expect(pin.credential == "u-1|123456")
+        let body = try HTTPClient.encodeJSON(PairingClient.requestBody(
+            pairing: pin, deviceName: "iPhone", deviceIdentifier: "inst-1", pushToken: "tok",
+            pushKeys: try PushKeys(stored: PushVectors.receiverStored), publicKey: "BAAA", appAttest: nil
+        ))
+        #expect(String(decoding: body, as: UTF8.self) ==
+            #"{"deviceIdentifier":"inst-1","deviceName":"iPhone","pinCode":"123456","platform":"ios","publicKey":"BAAA","# +
+            #""pushAuth":"\#(PushVectors.auth)","pushP256dh":"\#(PushVectors.receiverP256dh)","pushToken":"tok","userId":"u-1"}"#)
+        #expect(try PairingClient.acceptedReply(answer(nil), proof: nil, request: body)["deviceId"] as? String == "dev-1")
     }
 }
 

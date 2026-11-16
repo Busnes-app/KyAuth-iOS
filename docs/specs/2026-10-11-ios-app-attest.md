@@ -20,8 +20,8 @@ At every pairing, after the new device signing key exists:
 
 1. `keyId = DCAppAttestService.shared.generateKey()` (a fresh App Attest key per pairing).
 2. `clientData = "kyidentity-appattest-v1|" + credential + "|" + publicKey`
-   - `credential`: the pairing token, else `userId + "|" + pinCode` (same rule as Android's
-     `kyidentity-attest-v1` challenge).
+   - `credential`: `"pair1:" + hex(SHA-256(pairing token))` (lowercase, pairing proof v1), else
+     `userId + "|" + pinCode` (same rule as Android's `kyidentity-attest-v1` challenge).
    - `publicKey`: the exact `publicKey` string sent in the request: standard padded base64 of
      the signing key's SPKI DER.
 3. `attestation = attestKey(keyId, clientDataHash: SHA256(clientData))`.

@@ -57,7 +57,8 @@ passcode and holds the phone. iOS protections are the foundation this app builds
 
    | Request | Device-signed | Attacker gains |
    |---|---|---|
-   | Pairing (`PairingClient`) | No: it enrols the key; App Attest is optional | Its own key enrolled, or the token spent; forged reply fields (an `appattest` grade Settings would show). Trust on first use |
+   | QR pairing (`PairingClient`, `PairingProof`) | No: it enrols the key. Pairing proof v1 MACs the exact request and reply with SHA-256 of the token, which never crosses the wire | Block or fail the pairing. Never the token, its own key or a forged reply field |
+   | PIN pairing (`PairingClient`) | No: it enrols the key; App Attest is optional | Its own key enrolled, or the PIN spent; forged reply fields (an `appattest` grade Settings would show). Trust on first use |
    | MFA answer (`MfaResponseClient`) | Yes: origin, user, device, challenge, purpose, expiry, decision, digits | Block or delay an answer, show a false result. Never an approval |
    | Push refresh (`PushRefreshClient`) | Yes: origin, device, time, transport, token hash, keys | Stop pushes |
    | Sign-on (`TokenClient`) | Yes: RFC 7523 assertion, 120 s, single-use `jti` | **The returned ID token, a bearer the consumer accepts as its whole credential**, or a substituted token for another account |
@@ -135,14 +136,15 @@ accepted when the setup code asks for them.
   around KyPost's certificate pin. The fix binds the token to a key the consumer holds
   (owner, 2026-11-16; KyAuth iOS #44 and five sibling PRs, KyPost-Server deploys last); open until
   all ship.
-- The same attacker present during pairing can enrol its own key; nothing checks the key out of
-  band.
+- The same attacker present during a PIN pairing can enrol its own key; nothing checks the key
+  out of band. A 6-digit PIN would fall to an offline search of a MAC, so pairing proof v1 covers
+  QR pairing only.
 - No independent security audit has taken place.
 
 ## Evidence
 
-- **Tests:** `KyAuthTests` covers pairing and endpoint validation, push parsing and the signed
-  message, RFC 8291 vectors, sign-on handoff validation, TOTP, the vault and the PIN policy.
+- **Tests:** `KyAuthTests` covers pairing and endpoint validation, the pairing proof v1 vector and
+  reply refusals, push parsing and the signed message, RFC 8291 vectors, sign-on handoff validation, TOTP, the vault and the PIN policy.
   Without Xcode, `scripts/check-push-crypto-linux.sh` runs the push crypto vectors against
   swift-crypto. The runner is configured to retain `coverage.json` (`xcrun xccov`)
   only after successful native tests, stats and coverage export, requiring exactly

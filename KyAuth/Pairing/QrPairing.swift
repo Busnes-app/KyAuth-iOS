@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 /// The short-lived pairing credential from a KyIdentity QR code or pairing link.
@@ -21,8 +22,9 @@ struct QrPairing: Equatable {
         expiresAtEpochSeconds: Int64? = nil
     ) throws {
         guard !serverUrl.isBlank else { throw PairingError.invalid("Server URL is required") }
-        guard !(pairingToken?.isBlank ?? true) || (!(pinCode?.isBlank ?? true) && !(userId?.isBlank ?? true)) else {
-            throw PairingError.invalid("Pairing token or (PIN code and user ID) is required")
+        // Pairing proof v1 names the user instead of sending the token.
+        guard !(pairingToken?.isBlank ?? true) || !(pinCode?.isBlank ?? true), !(userId?.isBlank ?? true) else {
+            throw PairingError.invalid("A pairing token or PIN code, and a user ID, are required")
         }
         self.serverUrl = serverUrl
         self.registrationUrl = registrationUrl
@@ -33,9 +35,15 @@ struct QrPairing: Equatable {
         self.expiresAtEpochSeconds = expiresAtEpochSeconds
     }
 
-    /// The credential the attestation challenge binds: the pairing token, else `userId|pinCode`.
+    /// Pairing proof v1's K, SHA-256 of the token; nil for PIN pairing.
+    var proofKey: Data? {
+        guard let pairingToken, !pairingToken.isBlank else { return nil }
+        return Data(SHA256.hash(data: Data(pairingToken.utf8)))
+    }
+
+    /// The credential the attestation challenge binds: `pair1:` + hex(K), else `userId|pinCode`.
     var credential: String {
-        if let pairingToken, !pairingToken.isBlank { return pairingToken }
+        if let proofKey { return "pair1:" + proofKey.map { String(format: "%02x", $0) }.joined() }
         return "\(userId ?? "")|\(pinCode ?? "")"
     }
 }

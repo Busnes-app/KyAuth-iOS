@@ -31,12 +31,23 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   device-signed and bound, so they hold without one. A new request that changes server state must
   carry a device-key signature over a domain-separated message binding origin and device; a reply
   field must never grant anything on its own. Open until the token binding ships (owner, 2026-11-16; KyAuth iOS #44 and five sibling PRs): the sign-on
-  `id_token` is a bearer in a plain `TokenClient` reply, and pairing is trust on first use
+  `id_token` is a bearer in a plain `TokenClient` reply. Only PIN pairing is trust on first use
   (Residual risk).
 - Wire contracts with KyIdentity are byte-exact and covered by golden-vector tests:
   `kyidentity-push-v2` (MFA answers), `kyidentity-push-token-v2` with transport `fcm` (the relay
   transport, which also carries APNs; KyIdentity master since PR #87), RFC 7523 device assertions (raw
-  `r||s`). Registration always sends `platform: "ios"`; an omitted platform is stored as Android.
+  `r||s`), pairing proof v1. Registration always sends `platform: "ios"`; an omitted platform is
+  stored as Android.
+- Pairing proof v1 (QR pairing; `Pairing/PairingProof.swift`, counterpart KyIdentity-server): the
+  token never crosses the wire. K = SHA-256(token). The body omits `pairingToken` and `pinCode`
+  and names `userId` (a QR code without one is refused); header `KyIdentity-Pairing-Proof` is
+  base64url, no padding, of HMAC-SHA256(K, `kyidentity-pair/1\n` + origin + `\n` + body) over the
+  exact bytes sent, origin as for `kyidentity-push-v2`. A 2xx reply is read only if its header
+  equals HMAC-SHA256(K, `kyidentity-pair-reply/1\n` + origin + `\n` + base64url(SHA-256(request
+  body)) + `\n` + the exact response bytes), checked in constant time; else "The server's pairing
+  reply could not be verified." and nothing is saved. App Attest `credential` is `pair1:` +
+  hex(K). This build needs a KyIdentity with pairing proof v1: an older one refuses the body. PIN
+  pairing sends what it always did (a 6-digit PIN would fall to an offline search of a MAC).
 - Sealed pushes: every pairing makes a software P-256 key and 16-byte auth secret (`PushKeys`), stored
   before registration as one `AfterFirstUnlockThisDeviceOnly` item in access group
   `group.org.kysecurity.authenticator.push` (the only group the extension holds), and sends them as
