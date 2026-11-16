@@ -26,6 +26,13 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 
 ## Local Contracts
 
+- KyAuth does not pin KyIdentity's certificate (owner, 2026-11-16, after a request-by-request
+  audit; `docs/ASSURANCE-CASE.md`, Trust boundaries 1). MFA answers and push refreshes are
+  device-signed and bound, so they hold without one. A new request that changes server state must
+  carry a device-key signature over a domain-separated message binding origin and device; a reply
+  field must never grant anything on its own. Open, pending an owner decision: the sign-on
+  `id_token` is a bearer in a plain `TokenClient` reply, and pairing is trust on first use
+  (Residual risk).
 - Wire contracts with KyIdentity are byte-exact and covered by golden-vector tests:
   `kyidentity-push-v2` (MFA answers), `kyidentity-push-token-v2` with transport `fcm` (the relay
   transport, which also carries APNs; KyIdentity master since PR #87), RFC 7523 device assertions (raw
