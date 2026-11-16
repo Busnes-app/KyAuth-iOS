@@ -616,7 +616,8 @@ final class AppModel {
             let now = Int64(Date().timeIntervalSince1970)
             let input = DeviceAssertion.signingInput(
                 deviceId: account.deviceId, userId: userId, serverUrl: account.serverUrl,
-                clientId: request.clientId, origin: request.origin, now: now, jti: UUID().uuidString.lowercased()
+                clientId: request.clientId, origin: request.origin, now: now, jti: UUID().uuidString.lowercased(),
+                cnf: request.cnf
             )
             let signature = try await signWithDeviceKey(
                 Data(input.utf8), reason: "Sign in to \(request.consumer.name)"

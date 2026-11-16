@@ -68,8 +68,8 @@ passcode and holds the phone. iOS protections are the foundation this app builds
    The app re-opens and checks every push itself (`KyAuth/Mfa/MfaChallenge.swift`, `MfaPushParser`).
 3. **Suite app → KyAuth (sign-on handoff).** Requests arrive as files in App Group
    `group.org.kysecurity.signon`, which only team `TATYN4X57D` apps can write. KyAuth then
-   checks the consumer against `TrustedConsumers`, the age, client ID, origin and issuer
-   (`KyAuth/SignOn/SignOnHandoff.swift`).
+   checks the consumer against `TrustedConsumers`, the age, client ID, origin, the optional `cnf`
+   proof-key thumbprint and issuer (`KyAuth/SignOn/SignOnHandoff.swift`).
 4. **App → its storage.** The vault is an AES-256-GCM file excluded from backup. Its key and
    every other Keychain item are this-device-only and never synced (`Shared/Keychain.swift`).
 
@@ -105,6 +105,7 @@ passcode and holds the phone. iOS protections are the foundation this app builds
 | Secrets restored to another device or reinstall | Keychain items `ThisDeviceOnly` and non-synchronizable; a fresh install deletes leftovers | `Shared/Keychain.swift`, `KyAuth/Security/LocalWipe.swift` |
 | PIN guessing | PBKDF2-HMAC-SHA256, 310,000 iterations, random 16-byte salt, constant-time compare; delays on system uptime; the fifth failure erases all data | `KyAuth/Security/PinPolicy.swift` |
 | Token theft through the sign-on handoff | Consumer allow-list, single-use request file, nonce format, 120 s age limit, issuer must equal the paired server | `KyAuth/SignOn/SignOnHandoff.swift` |
+| ID token read in transit and replayed at the relay | KyAuth puts the consumer's `cnf` thumbprint in the assertion; a malformed one is refused. Binding holds only once KyIdentity copies it into the ID token and KyPost-Server requires proof of that key: KyAuth checks format, not possession | `KyAuth/SignOn/SignOnHandoff.swift`, `KyAuth/SignOn/DeviceAssertion.swift` |
 | Malformed `otpauth://` input | Defaults only for omitted parameters; unsupported or malformed algorithm, digits or period refused | `KyAuth/Totp/TotpEntry.swift` |
 | Keyloggers, shoulder surfing | Third-party keyboards refused app-wide; a cover over the app switcher and screen capture | `KyAuth/App/KyAuthApp.swift`, `KyAuth/UI/RootView.swift` |
 | Secrets in logs | The app has no logging calls (`print`, `os_log`, `Logger`, `NSLog`) | whole source tree |

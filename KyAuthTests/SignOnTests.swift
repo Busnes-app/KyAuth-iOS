@@ -32,6 +32,23 @@ struct DeviceAssertionTests {
         #expect(claims["exp"] as? Int == 1120)
         #expect(claims["jti"] as? String == "j-1")
         #expect(claims["origin"] as? String == "https://mail.example.com")
+        #expect(claims["cnf"] == nil)
+    }
+
+    @Test func signingInputCarriesTheProofKeyThumbprint() throws {
+        let thumb = "Wnp4zKSg9CDZvGK7Zpw8J1njn3I9OuENy-DwgVoH7NQ"
+        let input = DeviceAssertion.signingInput(
+            deviceId: "dev-1", userId: "user-1", serverUrl: "https://id.example.com",
+            clientId: "kypost", origin: "https://mail.example.com", now: 1000, jti: "j-1", cnf: thumb
+        )
+        let parts = input.split(separator: ".").map(String.init)
+        let claims = decode(parts[1])
+        #expect(claims.count == 9)
+        #expect(claims["cnf"] as? [String: String] == ["spki#S256": thumb])
+        var base64 = parts[1].replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+        while base64.count % 4 != 0 { base64 += "=" }
+        let raw = String(decoding: try #require(Data(base64Encoded: base64)), as: UTF8.self)
+        #expect(raw.contains(#""cnf":{"spki#S256":"\#(thumb)"}"#))
     }
 
     @Test func relayOriginNormalisesHttpsAndRefusesEverythingElse() {
@@ -137,7 +154,38 @@ struct SignOnHandoffTests {
         let accepted = try SignOnHandoff.validate(request(), nonce: nonce, paired: paired, now: now)
         #expect(accepted.consumer.name == "KyPost")
         #expect(accepted.origin == "https://relay.example.com")
+        #expect(accepted.cnf == nil)
         #expect(SignOnHandoff.returnURL(accepted.consumer, nonce: nonce)?.absoluteString == "kypost://kyidentity-signon?nonce=\(nonce)")
+    }
+
+    @Test func acceptsAProofKeyThumbprint() throws {
+        let thumb = "Wnp4zKSg9CDZvGK7Zpw8J1njn3I9OuENy-DwgVoH7NQ"
+        let accepted = try SignOnHandoff.validate(request(["cnf": thumb]), nonce: nonce, paired: paired, now: now)
+        #expect(accepted.cnf == thumb)
+    }
+
+    /// A malformed `cnf` is the consumer's error and is refused before any prompt, like a bad origin.
+    @Test func refusesAMalformedProofKeyThumbprint() {
+        let kypost = TrustedConsumers.all["org.kysecurity.mail"]!
+        let refused = SignOnRefusal.refused("The app sent an invalid sign-in request.", kypost)
+        let thumb = "Wnp4zKSg9CDZvGK7Zpw8J1njn3I9OuENy-DwgVoH7NQ"
+        let bad: [Any] = [
+            String(thumb.dropLast()),
+            thumb + "A",
+            String(thumb.dropLast()) + "+",
+            String(thumb.dropLast()) + "/",
+            String(thumb.dropLast()) + "=",
+            String(thumb.dropLast()) + "é",
+            "",
+            NSNull(),
+            42,
+            ["spki#S256": thumb],
+        ]
+        for value in bad {
+            #expect(throws: refused) {
+                try SignOnHandoff.validate(request(["cnf": value]), nonce: nonce, paired: paired, now: now)
+            }
+        }
     }
 
     @Test func expiredOrUnknownRequestsHaveNoAnswer() {
@@ -211,9 +259,9 @@ struct SignOnHandoffTests {
     }
 
     @Test func nonceFormat() {
-        #expect(SignOnHandoff.isValidNonce(nonce))
-        #expect(!SignOnHandoff.isValidNonce(String(repeating: "A", count: 44)))
-        #expect(!SignOnHandoff.isValidNonce(String(repeating: "A", count: 42) + "/"))
+        #expect(SignOnHandoff.isBase64url32(nonce))
+        #expect(!SignOnHandoff.isBase64url32(String(repeating: "A", count: 44)))
+        #expect(!SignOnHandoff.isBase64url32(String(repeating: "A", count: 42) + "/"))
     }
 }
 

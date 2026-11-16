@@ -19,6 +19,8 @@ struct SignOnRequest: Equatable {
     let consumer: TrustedConsumers.Consumer
     let clientId: String
     let origin: String
+    /// The consumer's proof-key thumbprint for the assertion's `cnf` claim; nil from older consumers.
+    let cnf: String?
     let issuer: String
     /// When the consumer wrote it; the consumer gives up on it 180 s later.
     let createdAt: Date
@@ -61,17 +63,18 @@ struct SignOnHandoff {
         self.root = root
     }
 
-    static func isValidNonce(_ nonce: String) -> Bool {
-        nonce.count == 43 && nonce.unicodeScalars.allSatisfy {
+    /// 32 bytes as unpadded base64url (43 characters): the nonce and the `cnf` thumbprint.
+    static func isBase64url32(_ value: String) -> Bool {
+        value.count == 43 && value.unicodeScalars.allSatisfy {
             $0.isASCII && (CharacterSet.alphanumerics.contains($0) || $0 == "-" || $0 == "_")
         }
     }
 
     /// Reads and deletes the request (single use), then validates it: age and consumer, client ID,
-    /// origin, pairing, issuer. Whether this device may sign on is KyIdentity's to decide at
+    /// origin, `cnf` (optional), pairing, issuer. Whether this device may sign on is KyIdentity's to decide at
     /// `/oauth/token`: the flag saved at pairing goes stale when it is changed on the devices page.
     func take(nonce: String, paired: PairedAccount?, now: Date = Date()) throws -> SignOnRequest {
-        guard Self.isValidNonce(nonce) else { throw SignOnRefusal.expired }
+        guard Self.isBase64url32(nonce) else { throw SignOnRefusal.expired }
         let file = root.appendingPathComponent("requests/\(nonce).json")
         guard let data = try? Data(contentsOf: file) else { throw SignOnRefusal.expired }
         try? FileManager.default.removeItem(at: file)
@@ -97,6 +100,10 @@ struct SignOnHandoff {
         guard let origin = DeviceAssertion.relayOrigin(rawOrigin), origin == rawOrigin else {
             throw SignOnRefusal.refused("The server address must use HTTPS.", consumer)
         }
+        let cnf = json["cnf"] as? String
+        guard json["cnf"] == nil || cnf.map(Self.isBase64url32) == true else {
+            throw SignOnRefusal.refused("The app sent an invalid sign-in request.", consumer)
+        }
         guard let paired, let userId = paired.userId, !userId.isBlank else {
             throw SignOnRefusal.refused("KyAuth is not paired with KyIdentity.", consumer)
         }
@@ -104,7 +111,7 @@ struct SignOnHandoff {
         guard sameIssuer(issuer, paired.serverUrl) else {
             throw SignOnRefusal.refused("KyAuth is paired with a different KyIdentity server.", consumer)
         }
-        return SignOnRequest(nonce: nonce, consumer: consumer, clientId: clientId, origin: origin, issuer: issuer,
+        return SignOnRequest(nonce: nonce, consumer: consumer, clientId: clientId, origin: origin, cnf: cnf, issuer: issuer,
                              createdAt: Date(timeIntervalSince1970: TimeInterval(createdAt) / 1000))
     }
 
@@ -122,7 +129,7 @@ struct SignOnHandoff {
     }
 
     func write(_ response: SignOnResponse, nonce: String) throws {
-        guard Self.isValidNonce(nonce) else { return }
+        guard Self.isBase64url32(nonce) else { return }
         let directory = root.appendingPathComponent("responses", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try Self.encode(response, nonce: nonce).write(

@@ -28,7 +28,7 @@ Request:
 
 ```json
 {"v":1,"nonce":"…","consumer":"org.kysecurity.mail","clientId":"…",
- "origin":"https://relay.example","issuer":"https://id.example","createdAtMs":1760000000000}
+ "origin":"https://relay.example","cnf":"…","issuer":"https://id.example","createdAtMs":1760000000000}
 ```
 
 - `consumer`: the consumer's bundle ID; must be in KyAuth's `TrustedConsumers`, which maps it to
@@ -36,6 +36,11 @@ Request:
 - `clientId`: the consumer server's KyIdentity `client_id`, `[A-Za-z0-9._:-]{1,128}`.
 - `origin`: the relay URL the user typed, canonicalised as on Android (`https://host[:port]`,
   default port dropped, ≤256 characters). KyAuth refuses a value that is not already canonical.
+- `cnf` (optional): base64url, no padding, of SHA-256 over the SPKI DER of a P-256 key the consumer
+  makes for this attempt only (43 characters, `[A-Za-z0-9_-]`). KyAuth refuses a present value of
+  any other form, like a bad origin; when valid it adds `"cnf": {"spki#S256": "<cnf>"}` to the
+  assertion claims, KyIdentity copies it into the ID token, and the relay's
+  `/api/auth/native/signon` requires a signature by that key. Omitted by older consumers.
 - `issuer`: the KyIdentity URL from the relay's `/api/auth/sso-config`. KyAuth refuses unless it
   is the paired KyIdentity (same scheme, host, port and path). This replaces Android KyPost's
   account `server_url` check, which iOS cannot read across apps.
@@ -57,7 +62,7 @@ Response, exactly one of:
 2. KyAuth reads and deletes the request; a missing file, a bad nonce or a request older than
    120 s (or more than 30 s in the future) writes nothing it can address, so it shows
    "Sign-in request expired" and stops. An unknown `consumer` is treated the same way: KyAuth has
-   no return scheme for it. It then checks, in order: client ID, origin, pairing (a user ID),
+   no return scheme for it. It then checks, in order: client ID, origin, `cnf`, pairing (a user ID),
    issuer. A failure writes an `error` response. Whether the device may sign on is checked by
    KyIdentity at `/oauth/token` (`device_signon_disabled`), not against the flag saved at pairing.
 3. KyAuth shows "<app> at <relay host[:port]> wants to sign in as <user> at <KyIdentity host>."
