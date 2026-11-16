@@ -30,7 +30,7 @@ approve sign-ins. Its security requirements:
 
 | Attacker | Can | Wants |
 |---|---|---|
-| Network attacker | Read and alter traffic between the phone and KyIdentity | Steal tokens, forge answers |
+| Network attacker | Read and alter traffic between the phone and KyIdentity; possibly hold a certificate the phone trusts for its host | Steal tokens, forge answers |
 | APNs, the push relay | See and replay push traffic | Learn who signs in where; trick the user into approving |
 | Malicious QR code or link | Put any server URL, token or registration URL in front of the user | Pair KyAuth with an attacker's server or send answers there |
 | Another app on the phone | Open `kyauth://` links; write to an App Group only if it is from team `TATYN4X57D` | Get an ID token, read codes |
@@ -50,6 +50,19 @@ passcode and holds the phone. iOS protections are the foundation this app builds
    every certificate in its built chain must expose actual RSA>=2048 or prime EC>=256
    key bits. This includes a root omitted from the wire and a directly trusted peer;
    missing/unknown metadata refuses the challenge. RSA block bytes are not bit size.
+
+   **No certificate pin, by decision.** The attacker it would stop holds a certificate the phone
+   trusts for the KyIdentity host (mis-issued, or obtained by hijacking DNS or domain validation)
+   and sits on the phone's path. What that attacker gets, request by request:
+
+   | Request | Device-signed | Attacker gains |
+   |---|---|---|
+   | Pairing (`PairingClient`) | No: it enrols the key; App Attest is optional | Its own key enrolled, or the token spent; forged reply fields (an `appattest` grade Settings would show). Trust on first use |
+   | MFA answer (`MfaResponseClient`) | Yes: origin, user, device, challenge, purpose, expiry, decision, digits | Block or delay an answer, show a false result. Never an approval |
+   | Push refresh (`PushRefreshClient`) | Yes: origin, device, time, transport, token hash, keys | Stop pushes |
+   | Sign-on (`TokenClient`) | Yes: RFC 7523 assertion, 120 s, single-use `jti` | **The returned ID token, a bearer the consumer accepts as its whole credential**, or a substituted token for another account |
+
+   The last row is open; see Residual risk.
 2. **APNs and the relay → phone.** Pushes are RFC 8291 `aes128gcm` sealed to a key pair made on
    the phone (`Shared/PushCrypto.swift`). The notification extension shows only fixed text.
    The app re-opens and checks every push itself (`KyAuth/Mfa/MfaChallenge.swift`, `MfaPushParser`).
@@ -115,6 +128,14 @@ accepted when the setup code asks for them.
   configured but await their first native CI result. Swift 5 mode without complete
   concurrency diagnostics leaves OpenSSF `warnings_strict` unverified. Hardware-only
   paths remain outside the simulator suite.
+- **Open:** an attacker with a phone-trusted certificate for the KyIdentity host can read the
+  sign-on ID token and redeem it at KyPost-Server first. Its native sign-on returns a direct pairing
+  link that needs no device approval, so the attacker pairs their own device to the user's mailbox,
+  around KyPost's certificate pin. The fix binds the token to a key the consumer holds
+  (owner, 2026-11-16; KyAuth iOS #44 and five sibling PRs, KyPost-Server deploys last); open until
+  all ship.
+- The same attacker present during pairing can enrol its own key; nothing checks the key out of
+  band.
 - No independent security audit has taken place.
 
 ## Evidence
