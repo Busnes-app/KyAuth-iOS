@@ -4,8 +4,11 @@ private let levels: Set<String> = ["none", "appattest"]
 
 /// Registers this phone with KyIdentity. The request always names `platform: "ios"`: an omitted
 /// platform is stored as Android, and its pushes would go to FCM with an APNs token. It always sends
-/// the push keys, so KyIdentity seals every push to this phone.
+/// the push keys, so KyIdentity seals every push to this phone. QR pairing sends pairing proof v1
+/// (`PairingProof`) instead of the token and needs a KyIdentity that supports it.
 struct PairingClient {
+    static let unverifiedReply = "The server's pairing reply could not be verified."
+
     var http = HTTPClient.shared
 
     func register(
@@ -18,15 +21,30 @@ struct PairingClient {
         appAttest: AppAttestation?
     ) async throws -> PairedAccount {
         let endpoint = try PairingEndpoint.validatedRegistrationUrl(pairing.serverUrl, pairing.registrationUrl)
-        let request = Self.requestBody(
+        let proof = try PairingProof(pairing)
+        // Encoded once: the proof covers exactly these bytes.
+        let body = try HTTPClient.encodeJSON(Self.requestBody(
             pairing: pairing, deviceName: deviceName, deviceIdentifier: deviceIdentifier,
             pushToken: pushToken, pushKeys: pushKeys, publicKey: publicKey, appAttest: appAttest
-        )
-        let response = try await http.postJSON(endpoint, request)
-        guard response.isSuccess, response.json["success"] as? Bool == true else {
+        ))
+        let headers = proof.map { [PairingProof.header: $0.request(body)] } ?? [:]
+        let response = try await http.send("POST", endpoint, body: body, headers: headers)
+        let json = try Self.acceptedReply(response, proof: proof, request: body)
+        return try Self.parseRegistration(json, pairing: pairing, deviceName: deviceName, attested: appAttest != nil)
+    }
+
+    /// The reply's JSON, read only after a proof pairing's reply proof checks out.
+    static func acceptedReply(_ response: HTTPResponse, proof: PairingProof?, request: Data) throws -> [String: Any] {
+        guard response.isSuccess else {
             throw PairingError.invalid(response.errorText ?? "Pairing failed (\(response.status))")
         }
-        return try Self.parseRegistration(response.json, pairing: pairing, deviceName: deviceName, attested: appAttest != nil)
+        if let proof, !proof.acceptsReply(response.headers[PairingProof.header.lowercased()], request: request, response: response.body) {
+            throw PairingError.invalid(unverifiedReply)
+        }
+        guard response.json["success"] as? Bool == true else {
+            throw PairingError.invalid(response.errorText ?? "Pairing failed (\(response.status))")
+        }
+        return response.json
     }
 
     static func requestBody(
@@ -47,8 +65,8 @@ struct PairingClient {
             "pushP256dh": pushKeys.p256dh,
             "pushAuth": pushKeys.authSecret,
         ]
-        if let token = pairing.pairingToken, !token.isBlank { body["pairingToken"] = token }
-        if let pin = pairing.pinCode, !pin.isBlank { body["pinCode"] = pin }
+        // The token never crosses the wire; a proof pairing sends no PIN either.
+        if pairing.proofKey == nil, let pin = pairing.pinCode, !pin.isBlank { body["pinCode"] = pin }
         if let userId = pairing.userId, !userId.isBlank { body["userId"] = userId }
         if let appAttest {
             body["appAttest"] = ["keyId": appAttest.keyId, "attestation": appAttest.attestation]

@@ -6,6 +6,8 @@ import Security
 struct HTTPResponse: Sendable {
     let status: Int
     let body: Data
+    /// Header names lowercased.
+    var headers: [String: String] = [:]
 
     var isSuccess: Bool { (200..<300).contains(status) }
 
@@ -48,10 +50,13 @@ final class HTTPClient: Sendable {
         session = URLSession(configuration: config, delegate: TransportPolicy(), delegateQueue: nil)
     }
 
-    func send(_ method: String, _ url: URL, body: Data?, contentType: String = "application/json") async throws -> HTTPResponse {
+    func send(
+        _ method: String, _ url: URL, body: Data?, contentType: String = "application/json", headers: [String: String] = [:]
+    ) async throws -> HTTPResponse {
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        for (name, value) in headers { request.setValue(value, forHTTPHeaderField: name) }
         if let body {
             request.httpBody = body
             request.setValue(contentType, forHTTPHeaderField: "Content-Type")
@@ -63,11 +68,19 @@ final class HTTPClient: Sendable {
             throw HTTPError.unreachable
         }
         guard let http = response as? HTTPURLResponse else { throw HTTPError.unreachable }
-        return HTTPResponse(status: http.statusCode, body: data.prefix(Self.maxBodyBytes))
+        var fields: [String: String] = [:]
+        for (name, value) in http.allHeaderFields {
+            if let name = name as? String, let value = value as? String { fields[name.lowercased()] = value }
+        }
+        return HTTPResponse(status: http.statusCode, body: data.prefix(Self.maxBodyBytes), headers: fields)
+    }
+
+    static func encodeJSON(_ object: [String: Any]) throws -> Data {
+        try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
     }
 
     func postJSON(_ url: URL, _ object: [String: Any]) async throws -> HTTPResponse {
-        try await send("POST", url, body: try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]))
+        try await send("POST", url, body: try Self.encodeJSON(object))
     }
 }
 

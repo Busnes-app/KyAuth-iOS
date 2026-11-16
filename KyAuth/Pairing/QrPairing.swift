@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 /// The short-lived pairing credential from a KyIdentity QR code or pairing link.
@@ -21,8 +22,9 @@ struct QrPairing: Equatable {
         expiresAtEpochSeconds: Int64? = nil
     ) throws {
         guard !serverUrl.isBlank else { throw PairingError.invalid("Server URL is required") }
-        guard !(pairingToken?.isBlank ?? true) || (!(pinCode?.isBlank ?? true) && !(userId?.isBlank ?? true)) else {
-            throw PairingError.invalid("Pairing token or (PIN code and user ID) is required")
+        // Pairing proof v1 names the user instead of sending the token.
+        guard !(pairingToken?.isBlank ?? true) || !(pinCode?.isBlank ?? true), !(userId?.isBlank ?? true) else {
+            throw PairingError.invalid("A pairing token or PIN code, and a user ID, are required")
         }
         self.serverUrl = serverUrl
         self.registrationUrl = registrationUrl
@@ -33,9 +35,19 @@ struct QrPairing: Equatable {
         self.expiresAtEpochSeconds = expiresAtEpochSeconds
     }
 
-    /// The credential the attestation challenge binds: the pairing token, else `userId|pinCode`.
+    /// Pairing proof v1's K = HMAC-SHA256(token, "kyidentity-pair-key/1"); nil for PIN pairing.
+    /// Not SHA-256(token): KyIdentity stores that as the token hash.
+    var proofKey: Data? {
+        guard let pairingToken, !pairingToken.isBlank else { return nil }
+        let code = HMAC<SHA256>.authenticationCode(
+            for: Data("kyidentity-pair-key/1".utf8), using: SymmetricKey(data: Data(pairingToken.utf8))
+        )
+        return Data(code)
+    }
+
+    /// The credential the attestation challenge binds: `pair1:` + hex(K), else `userId|pinCode`.
     var credential: String {
-        if let pairingToken, !pairingToken.isBlank { return pairingToken }
+        if let proofKey { return "pair1:" + proofKey.map { String(format: "%02x", $0) }.joined() }
         return "\(userId ?? "")|\(pinCode ?? "")"
     }
 }

@@ -53,7 +53,7 @@ open KyAuth.xcodeproj
 1. Select the **KyAuth** scheme and an installed iOS simulator to evaluate the UI.
 2. For a real iPhone/iPad, select your Apple development team for the app and notification extension and provide matching provisioning, push and App Group/Keychain entitlements. A successful simulator build does not provide these capabilities. The checked-in team identifies the project’s distribution setup, not yours.
 3. Build/run on the device. Set its passcode before using the real vault. Add a TOTP account in **Codes** and verify a code at that site; local TOTP does not require KyIdentity.
-4. For push MFA, install/configure [KyIdentity](https://github.com/Busnes-app/KyIdentity-server), including its APNs relay, app identity/attestation settings and certificate configuration. Create a pairing QR in KyIdentity’s device settings, scan it or enter its URL/token, and confirm before the 90-second token expires.
+4. For push MFA, install/configure [KyIdentity](https://github.com/Busnes-app/KyIdentity-server), including its APNs relay, app identity/attestation settings and certificate configuration. Create a pairing QR in KyIdentity’s device settings, scan it or enter its URL/token, and confirm before the 90-second token expires. QR pairing needs a KyIdentity release with pairing proof v1; an older one refuses it.
 5. Allow notifications, initiate a real browser sign-in, and approve the matching challenge. Verify delivery on a locked/backgrounded physical device separately. Pairing waits for a real APNs token.
 
 Preserve the signing identity and access groups when updating a paired install. Uninstall,
