@@ -131,8 +131,9 @@ accepted when the setup code asks for them.
 - **Open:** an attacker with a phone-trusted certificate for the KyIdentity host can read the
   sign-on ID token and redeem it at KyPost-Server first. Its native sign-on returns a direct pairing
   link that needs no device approval, so the attacker pairs their own device to the user's mailbox,
-  around KyPost's certificate pin. The fix (binding the token to the consumer, or pinning
-  KyIdentity) awaits an owner decision.
+  around KyPost's certificate pin. The fix binds the token to a key the consumer holds
+  (owner, 2026-11-16; KyAuth iOS #44 and five sibling PRs, KyPost-Server deploys last); open until
+  all ship.
 - The same attacker present during pairing can enrol its own key; nothing checks the key out of
   band.
 - No independent security audit has taken place.

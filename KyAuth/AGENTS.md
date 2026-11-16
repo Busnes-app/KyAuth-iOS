@@ -30,7 +30,7 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   audit; `docs/ASSURANCE-CASE.md`, Trust boundaries 1). MFA answers and push refreshes are
   device-signed and bound, so they hold without one. A new request that changes server state must
   carry a device-key signature over a domain-separated message binding origin and device; a reply
-  field must never grant anything on its own. Open, pending an owner decision: the sign-on
+  field must never grant anything on its own. Open until the token binding ships (owner, 2026-11-16; KyAuth iOS #44 and five sibling PRs): the sign-on
   `id_token` is a bearer in a plain `TokenClient` reply, and pairing is trust on first use
   (Residual risk).
 - Wire contracts with KyIdentity are byte-exact and covered by golden-vector tests:
