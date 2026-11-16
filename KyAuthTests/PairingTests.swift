@@ -111,7 +111,7 @@ struct QrPairingParserTests {
         #expect(pairing.serverUrl == "https://id.example.com")
         #expect(pairing.pairingToken == "pt-1")
         #expect(pairing.username == "ada")
-        #expect(pairing.credential == "pair1:" + PushStore.hex(Data(SHA256.hash(data: Data("pt-1".utf8)))))
+        #expect(pairing.credential.hasPrefix("pair1:"))
     }
 
     @Test func parsesDeepLinkWithPin() throws {
@@ -278,8 +278,8 @@ struct PairingProofTests {
     )
     let request = Data(#"{"userId":"user-1","deviceName":"Pixel","deviceIdentifier":"inst-1","platform":"android","publicKey":"BAAA","pushToken":"tok","pushTransport":"fcm"}"#.utf8)
     let response = Data((#"{"success":true,"deviceId":"dev-1","device":{"id":"dev-1"}}"# + "\n").utf8)
-    let reply = "zANXKOlyO1yxqAb2W4QqpkPWmL37PaXBKqaPjOlrJgY"
-    let cred = "pair1:6b374db4159ffa3ad74bcc886b8d70a0c421952f0dddb887820093e27044d8d4"
+    let reply = "QsV0h3Srdjg805wx19o-D3Ee1KhzmKAz1RqP4Zu0Q-Y"
+    let cred = "pair1:8f7bb6e4f056bb6d1846aa7544964867c93afdd56ec29c73c46aac8ebd8f8d76"
 
     private func answer(_ proof: String?, body: Data? = nil, status: Int = 201) -> HTTPResponse {
         HTTPResponse(status: status, body: body ?? response, headers: proof.map { ["kyidentity-pairing-proof": $0] } ?? [:])
@@ -287,7 +287,7 @@ struct PairingProofTests {
 
     @Test func matchesGoldenVector() throws {
         let proof = try #require(try PairingProof(pairing))
-        #expect(proof.request(request) == "NbMaNQG2rujfajtoYLf01p2YnmfAW3EFm3_26roCDUc")
+        #expect(proof.request(request) == "mJoloQsGw4y-mlo2Lo3pMsesJrVna3FPQN4DuV5HaTs")
         #expect(PairingProof.requestHash(request) == "cykwj-49G__TJq22JeLvRDBE4qzm3_BRgfznUMMoiag")
         #expect(proof.acceptsReply(reply, request: request, response: response))
         #expect(pairing.credential == cred)
@@ -299,7 +299,15 @@ struct PairingProofTests {
         let spelled = try QrPairing(
             serverUrl: "https://ID.Example.com:443/", pairingToken: "00112233445566778899aabbccddeeff0011223344556677", userId: "user-1"
         )
-        #expect(try #require(try PairingProof(spelled)).request(request) == "NbMaNQG2rujfajtoYLf01p2YnmfAW3EFm3_26roCDUc")
+        #expect(try #require(try PairingProof(spelled)).request(request) == "mJoloQsGw4y-mlo2Lo3pMsesJrVna3FPQN4DuV5HaTs")
+    }
+
+    /// SHA-256(token) is the hash KyIdentity stores; a database reader must not hold K.
+    @Test func keyIsNotTheStoredTokenHash() throws {
+        let token = try #require(pairing.pairingToken)
+        let key = try #require(pairing.proofKey)
+        #expect(key.count == 32)
+        #expect(key != Data(SHA256.hash(data: Data(token.utf8))))
     }
 
     @Test func aVerifiedReplyIsRead() throws {

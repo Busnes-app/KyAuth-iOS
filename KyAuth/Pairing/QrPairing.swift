@@ -35,10 +35,14 @@ struct QrPairing: Equatable {
         self.expiresAtEpochSeconds = expiresAtEpochSeconds
     }
 
-    /// Pairing proof v1's K, SHA-256 of the token; nil for PIN pairing.
+    /// Pairing proof v1's K = HMAC-SHA256(token, "kyidentity-pair-key/1"); nil for PIN pairing.
+    /// Not SHA-256(token): KyIdentity stores that as the token hash.
     var proofKey: Data? {
         guard let pairingToken, !pairingToken.isBlank else { return nil }
-        return Data(SHA256.hash(data: Data(pairingToken.utf8)))
+        let code = HMAC<SHA256>.authenticationCode(
+            for: Data("kyidentity-pair-key/1".utf8), using: SymmetricKey(data: Data(pairingToken.utf8))
+        )
+        return Data(code)
     }
 
     /// The credential the attestation challenge binds: `pair1:` + hex(K), else `userId|pinCode`.

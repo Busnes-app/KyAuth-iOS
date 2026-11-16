@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 
 /// KyAuth pairing proof v1, QR pairing only: the token never crosses the wire. Both sides MAC the
-/// exact bytes they send with K = SHA-256(token), which KyIdentity already stores as the token hash.
+/// exact bytes they send with K (`QrPairing.proofKey`), which KyIdentity keeps sealed.
 /// Wire contract shared with KyIdentity-server and KyAuth Android; vectors in `PairingProofTests`.
 struct PairingProof {
     static let header = "KyIdentity-Pairing-Proof"

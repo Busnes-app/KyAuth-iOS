@@ -39,7 +39,8 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
   `r||s`), pairing proof v1. Registration always sends `platform: "ios"`; an omitted platform is
   stored as Android.
 - Pairing proof v1 (QR pairing; `Pairing/PairingProof.swift`, counterpart KyIdentity-server): the
-  token never crosses the wire. K = SHA-256(token). The body omits `pairingToken` and `pinCode`
+  token never crosses the wire. K = HMAC-SHA256(key: token, `kyidentity-pair-key/1`), never
+  SHA-256(token), which KyIdentity stores as the token hash. The body omits `pairingToken` and `pinCode`
   and names `userId` (a QR code without one is refused); header `KyIdentity-Pairing-Proof` is
   base64url, no padding, of HMAC-SHA256(K, `kyidentity-pair/1\n` + origin + `\n` + body) over the
   exact bytes sent, origin as for `kyidentity-push-v2`. A 2xx reply is read only if its header

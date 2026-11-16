@@ -57,7 +57,7 @@ passcode and holds the phone. iOS protections are the foundation this app builds
 
    | Request | Device-signed | Attacker gains |
    |---|---|---|
-   | QR pairing (`PairingClient`, `PairingProof`) | No: it enrols the key. Pairing proof v1 MACs the exact request and reply with SHA-256 of the token, which never crosses the wire | Block or fail the pairing. Never the token, its own key or a forged reply field |
+   | QR pairing (`PairingClient`, `PairingProof`) | No: it enrols the key. Pairing proof v1 MACs the exact request and reply with a key derived from the token (not its stored hash); the token never crosses the wire | Block or fail the pairing. Never the token, its own key or a forged reply field |
    | PIN pairing (`PairingClient`) | No: it enrols the key; App Attest is optional | Its own key enrolled, or the PIN spent; forged reply fields (an `appattest` grade Settings would show). Trust on first use |
    | MFA answer (`MfaResponseClient`) | Yes: origin, user, device, challenge, purpose, expiry, decision, digits | Block or delay an answer, show a false result. Never an approval |
    | Push refresh (`PushRefreshClient`) | Yes: origin, device, time, transport, token hash, keys | Stop pushes |
