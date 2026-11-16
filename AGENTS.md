@@ -293,6 +293,8 @@ When the user requests a durable behavior change, record it here or in the relev
 
 ## Child DOX Index
 
+- `docs/AGENTS.md` — mdBook manual, chapter ownership and documentation checks.
+
 - `KyAuth/` — the KyAuth iOS app: product contracts, file ownership and verification.
 
 - `scripts/tls-fixtures/` — disposable native TLS fixture generation/server and
