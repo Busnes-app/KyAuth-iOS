@@ -43,6 +43,11 @@ only: no macOS, Mac Catalyst, visionOS or tvOS.
 - App Attest grading: `docs/specs/2026-10-11-ios-app-attest.md`. Sign-on handoff:
   `docs/specs/2026-10-11-ios-signon-handoff.md`. Change either only together with its counterpart
   (KyIdentity-server, KyPost-for-Mac).
+- Sign-on token binding: a handoff request may carry `cnf`, the consumer's per-attempt proof-key
+  thumbprint (base64url SHA-256 of its SPKI DER, `^[A-Za-z0-9_-]{43}$`). Present but malformed
+  (any non-string included) is refused like a bad origin, before any prompt. Valid, the assertion
+  claims gain `"cnf": {"spki#S256": "<thumb>"}`; absent stays absent. KyIdentity copies it into the
+  ID token and KyPost-Server requires proof of the key; KyAuth only checks the format.
 - Release builds require HTTPS; debug builds also accept loopback HTTP.
 - HTTPS retains the challenge’s normal SSL/hostname/time/anchor evaluation, then
   checks every evaluated certificate including its anchor: actual RSA at least

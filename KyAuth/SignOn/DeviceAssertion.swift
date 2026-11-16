@@ -31,10 +31,10 @@ enum DeviceAssertion {
 
     static func signingInput(
         deviceId: String, userId: String, serverUrl: String, clientId: String,
-        origin: String, now: Int64, jti: String
+        origin: String, now: Int64, jti: String, cnf: String? = nil
     ) -> String {
         let header: [String: Any] = ["alg": "ES256", "typ": "JWT", "kid": deviceId]
-        let claims: [String: Any] = [
+        var claims: [String: Any] = [
             "iss": "device:\(deviceId)",
             "sub": userId,
             "aud": serverUrl.trimmingTrailingSlashes() + "/oauth/token",
@@ -44,6 +44,8 @@ enum DeviceAssertion {
             "jti": jti,
             "origin": origin,
         ]
+        // Binds the ID token to the consumer's proof key; KyIdentity copies it, the relay checks it.
+        if let cnf { claims["cnf"] = ["spki#S256": cnf] }
         return base64url(json(header)) + "." + base64url(json(claims))
     }
 
