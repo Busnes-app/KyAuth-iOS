@@ -4,6 +4,7 @@ on:
   push:
     branches: [master]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches: [master]
   schedule:
     - cron: "29 6 * * 1"
@@ -19,6 +20,7 @@ concurrency:
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
+    if: github.event.pull_request.draft != true
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     permissions:

@@ -19,6 +19,7 @@ on:
   push:
     branches: [master]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches: [master]
   workflow_dispatch:
 
@@ -32,6 +33,7 @@ concurrency:
 jobs:
   scanned-code:
     name: Fuzz QR parsing
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     container:
