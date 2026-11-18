@@ -1,0 +1,8 @@
+This update supports KyIdentity's latest secure pairing and app sign-in:
+
+- QR pairing proves possession of the pairing token without sending it and verifies the server's reply before saving the pairing.
+- App sign-in supports identity tokens bound to the requesting app's proof key.
+- Pairing, returning to KyAuth, copied codes and interrupted sign-in requests are more reliable.
+- TOTP setup keys of at least 80 bits are supported, with a warning for keys shorter than 128 bits. Existing shorter entries remain available to edit or delete.
+
+For administrators: new QR pairings require a KyIdentity server with pairing proof v1 support. Update KyIdentity before pairing with this version. PIN pairing is unchanged. Existing pairings and encrypted TOTP entries are preserved when updating the app.
