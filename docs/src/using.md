@@ -2,7 +2,7 @@
 
 ## TOTP accounts
 
-Use the Codes tab to add an account from its setup QR/link or secret, then verify a code with the service. Unlocking the vault requires Face ID or the device passcode. The app locks immediately in the background and also after the configured idle period.
+Use the **Codes** tab to add an account from its setup QR code, link, or secret, then verify a code with the service. Unlocking the vault requires Face ID or the device passcode. The app locks immediately in the background and also after the configured idle period.
 
 ## Push approvals
 
