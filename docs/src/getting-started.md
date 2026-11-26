@@ -6,6 +6,6 @@ Set an iPhone or iPad passcode before using KyAuth. Source installation requires
 
 ## Pair and verify
 
-Use a fresh device-pairing code from your KyIdentity server. Complete the app's pairing flow against the intended HTTPS server and allow notifications for push approvals. Keep another sign-in/recovery method until a real sign-in has succeeded.
+Use a fresh device-pairing code from your KyIdentity server. Complete the app's pairing flow against the intended HTTPS server and allow notifications for push approvals. Keep another sign-in or recovery method until a real sign-in has succeeded.
 
 TOTP secrets have no backup, export or sync. Save the recovery codes issued by every service before relying on this device.

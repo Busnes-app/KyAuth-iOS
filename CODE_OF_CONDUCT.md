@@ -104,7 +104,7 @@ someone else, and you may report an incident you witnessed but were not the
 target of.
 
 **Security vulnerabilities are not a Code of Conduct matter.** Report those
-through [GitHub Security Advisories](https://github.com/Yoshiofthewire/KyAuth-iOS/security/advisories),
+through [GitHub Security Advisories](https://github.com/Busnes-app/KyAuth-iOS/security/advisories),
 as described in [SECURITY.md](SECURITY.md).
 
 ## Enforcement

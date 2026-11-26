@@ -3,16 +3,15 @@
 ## Product reference
 
 The [repository README](https://github.com/Busnes-app/KyAuth-iOS/blob/master/README.md) links the current installation commands,
-environment reference and supported deployment/distribution paths. Read the version matching your installation.
-The links below open repository documents and need network access.
-
-
+environment reference and supported deployment and distribution paths. Read the version matching your installation.
+The links below open repository documents and require network access.
 
 ## Detailed product guides
 
-- [Verifying releases](https://github.com/Yoshiofthewire/KyAuth-iOS/blob/master/docs/VERIFYING-RELEASES.md)
-- [Assurance case](https://github.com/Yoshiofthewire/KyAuth-iOS/blob/master/docs/ASSURANCE-CASE.md)
-- [TLS key-floor evidence](https://github.com/Yoshiofthewire/KyAuth-iOS/blob/master/docs/native-tls-evidence.md)
+- [Verifying releases](https://github.com/Busnes-app/KyAuth-iOS/blob/master/docs/VERIFYING-RELEASES.md)
+- [Assurance case](https://github.com/Busnes-app/KyAuth-iOS/blob/master/docs/ASSURANCE-CASE.md)
+- [TLS key-floor evidence](https://github.com/Busnes-app/KyAuth-iOS/blob/master/docs/native-tls-evidence.md)
+- [App privacy](https://github.com/Busnes-app/KyAuth-iOS/blob/master/Distribution/AppStore/app-privacy.md)
 
 ## Privacy and vulnerability reports
 

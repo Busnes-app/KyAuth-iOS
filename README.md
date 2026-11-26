@@ -95,13 +95,16 @@ vault/Keychain integration or SwiftUI. `scripts/capture-screenshots.sh` uses dem
 fixtures and is a capture workflow,
 not evidence of live push or security qualification. Design contracts are in `docs/specs/`.
 
-## Security and contributing
+## Documentation and contributing
 
-- Report vulnerabilities privately through the repository's **Security** tab
-  ([policy](https://github.com/Busnes-app/.github/blob/main/SECURITY.md)).
-- [Contributing](CONTRIBUTING.md) — process, tests and coding standard.
+- [User manual](https://busnes.app/manuals/kyauth-ios/) ([Markdown sources](docs/src/introduction.md)) — build and check locally with `mdbook build docs` and `python3 docs/check-links.py`, then open `docs/book/index.html`. The documentation workflow also uploads a `documentation-book` artifact.
 - [Verifying releases](docs/VERIFYING-RELEASES.md) — what you can check of an App Store build, and what you cannot.
+- [App privacy](Distribution/AppStore/app-privacy.md) — the App Store privacy answers and the manifest they must match.
+- [TLS key-floor evidence](docs/native-tls-evidence.md) — observations behind the certificate-key floor.
 - [Assurance case](docs/ASSURANCE-CASE.md) — threat model, trust boundaries, and why the security requirements are met.
+- [App Attest spec](docs/specs/2026-10-11-ios-app-attest.md) and [Sign-on handoff spec](docs/specs/2026-10-11-ios-signon-handoff.md) — wire contracts with KyIdentity and suite apps.
+- [Contributing](CONTRIBUTING.md) — process, tests, and coding standard.
+- [Security policy](SECURITY.md) — security model and private vulnerability reporting route ([org policy](https://github.com/Busnes-app/.github/blob/main/SECURITY.md)).
 
 ## License
 
@@ -109,21 +112,3 @@ not evidence of live push or security qualification. Design contracts are in `do
 ([SpaceGrotesk-OFL.txt](KyAuth/Resources/Fonts/SpaceGrotesk-OFL.txt)).
 
 [![OctoCounts](https://api.octocounts.com/badge/Busnes-app/KyAuth-iOS/branch/master)](https://octocounts.com/github/Busnes-app/KyAuth-iOS/tree/master)
-
-## Documentation
-
-- [Verifying releases](docs/VERIFYING-RELEASES.md) — how releases are distributed and what you can verify.
-- [App privacy](Distribution/AppStore/app-privacy.md) — the App Store privacy answers and the manifest they must match.
-- [TLS key-floor evidence](docs/native-tls-evidence.md) — observations behind the certificate-key floor.
-- [Assurance case](docs/ASSURANCE-CASE.md) — threat model, trust boundaries, and why the security requirements are met.
-- [Contributing](CONTRIBUTING.md) — how to propose a change and what it must pass.
-- [Security policy](SECURITY.md) — how to report a vulnerability privately.
-
-## User manual
-
-Read the [online manual](https://busnes.app/manuals/kyauth-ios/) or browse its
-[Markdown sources](docs/src/introduction.md).
-
-Build and check it with `mdbook build docs` and `python3 docs/check-links.py`,
-then open `docs/book/index.html`. The documentation workflow also provides a
-downloadable `documentation-book` artifact.
